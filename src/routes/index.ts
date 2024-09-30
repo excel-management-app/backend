@@ -1,7 +1,6 @@
-import { Router,Request,Response } from 'express';
-import { readFileRoute } from './read.route';
+import { Router } from 'express'
+import { readFileRoute } from './read.route'
 
-export const appRouter = Router();
+export const appRouter = Router()
 
-appRouter.use('/read',readFileRoute)
-
+appRouter.use('/read', readFileRoute)
