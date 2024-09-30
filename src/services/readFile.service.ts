@@ -1,12 +1,14 @@
-import { Request, Response } from "express";
-import * as XLSX from "xlsx";
-import Papa from "papaparse";
+import * as XLSX from 'xlsx'
 
-export const readFileService = () => {
+export const readFileService = (sheetName?: string) => {
     const filePath = `src/public/file_example_XLS_1000.xls`
-    const workbook = XLSX.readFile(filePath);
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    const data = XLSX.utils.sheet_to_json(worksheet,{ header: 1 });
-    return data
+    const workbook = XLSX.readFile(filePath)
+    const worksheet = sheetName
+        ? workbook.Sheets[sheetName]
+        : workbook.Sheets[workbook.SheetNames[0]]
+
+    return {
+        data: XLSX.utils.sheet_to_json(worksheet, { header: 1 }),
+        sheetNames: workbook.SheetNames
+    }
 }
