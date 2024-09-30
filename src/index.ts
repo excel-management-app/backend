@@ -5,6 +5,7 @@ import helmet from "helmet";
 import compression from 'compression'
 import cors from 'cors'
 import {appRouter} from './routes/index'
+import {connectDB} from './config/db'
 
 // load .env
 dotenv.config()
@@ -17,6 +18,7 @@ app.use(
   })
 );
 
+connectDB();
 
 // use morgan
 app.use(morgan('combined'))
