@@ -33,15 +33,14 @@ export const createDataService = async (req: Request, res: Response) => {
 
         var arrDB = await dataDB();
 
-        arrDB[0].data[sheetName] = db;
-        arrDB[0].updatedAt = new Date();  // Update the timestamp
+        arrDB[0].data[sheetName] = db;  // replace data sheet cũ bằng sheet mới
+        arrDB[0].updatedAt = new Date(); 
         
-        console.log("arrDB=====");
-        console.log(arrDB[0].data[sheetName]);
-        console.log(arrDB);
+        var dataUpdate = {
+            data: arrDB[0].data  // data update mongo
+        }
         try{
-            const deleteData = await configModel.deleteOne();
-            const saveData = await configModel.create(arrDB);
+            const saveData = await configModel.findByIdAndUpdate(arrDB[0]._id, dataUpdate);
             return {status: 200, message: "Đã thêm mới dữ liệu thành công"};
         }
         catch {
@@ -58,10 +57,35 @@ export const createDataService = async (req: Request, res: Response) => {
 }
 
 export const editDataService = async (req: Request, res: Response) => {
-    const dataUpdate = req.body;
+     // gửi lên dạng {"data":["null","63_51","71_52"]}
+    const dataUpdate = req.body.data;
     console.log("dataUpdate====",dataUpdate)
+    var db = await listData();
 
-    return dataUpdate;
+    const index = db.findIndex((arr: any[]) => arr[1] === dataUpdate[1]); // tìm kiếm array chứa key gửi lên
+
+    if (index !== -1) {
+        db[index] = dataUpdate;
+
+        var arrDB = await dataDB();
+
+        arrDB[0].data[sheetName] = db;  // replace data sheet cũ bằng sheet mới
+        arrDB[0].updatedAt = new Date(); 
+        
+        var dataSave = {
+            data: arrDB[0].data  // data update mongo
+        }
+
+        try{
+            const saveData = await configModel.findByIdAndUpdate(arrDB[0]._id, dataSave);
+            return {status: 200, message: "Cập nhật dữ liệu thành công"};
+        }
+        catch {
+            return {status: 400, message: "Lỗi khi update"};
+        }
+    } else {
+        return {status: 404, message: "Không tìm thấy dữ liệu để update"};
+    }
 }
 
 
