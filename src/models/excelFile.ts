@@ -6,7 +6,10 @@ const sheetSchema = new mongoose.Schema({
     rows: [
         {
             type: Map,
-            of: String,
+            of: new mongoose.Schema({
+                value: String, // Giá trị chính của mỗi phần tử trong Map
+                cookieDevice: String, // Thêm trường cookie vào mỗi đối tượng
+            }),
         },
     ],
 });
