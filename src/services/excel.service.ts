@@ -89,7 +89,9 @@ export const updateRowInSheet = async (
 
         await file.updateOne({ $set: { sheets: file.sheets } });
 
-        res.status(200).json({ message: 'Row updated successfully', file });
+        res.status(200).json({
+            message: 'Row updated successfully',
+        });
     } catch (error: any) {
         res.status(500).send('Error updating row: ' + error.message);
     }
@@ -125,7 +127,9 @@ export const deleteRowFromSheet = async (
 
         await file.save();
 
-        res.status(200).json({ message: 'Row deleted successfully', file });
+        res.status(200).json({
+            message: 'Row deleted successfully',
+        });
     } catch (error: any) {
         res.status(500).send('Error deleting row: ' + error.message);
     }
@@ -146,7 +150,7 @@ export const getFileData = async (
             return;
         }
 
-        res.status(200).json(file);
+        res.status(200).json({ data: file });
     } catch (error: any) {
         res.status(500).send('Error retrieving file data: ' + error.message);
     }
@@ -156,11 +160,11 @@ export const getFileData = async (
 export const getFiles = async (_req: Request, res: Response) => {
     try {
         const files = await ExcelFile.find();
-        const fileData = files.map((file) => ({
+        const data = files.map((file) => ({
             _id: file._id,
             fileName: file.fileName.replace(/^\d+-/, ''),
         }));
-        res.json(fileData);
+        res.json({ data });
     } catch (error) {
         console.error(error);
         res.status(500).send('Error retrieving files');
