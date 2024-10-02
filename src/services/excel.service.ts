@@ -151,3 +151,18 @@ export const getFileData = async (
         res.status(500).send('Error retrieving file data: ' + error.message);
     }
 };
+
+// get files
+export const getFiles = async (_req: Request, res: Response) => {
+    try {
+        const files = await ExcelFile.find();
+        const fileData = files.map((file) => ({
+            _id: file._id,
+            fileName: file.fileName.replace(/^\d+-/, ''),
+        }));
+        res.json(fileData);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error retrieving files');
+    }
+};

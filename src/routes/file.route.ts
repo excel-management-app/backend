@@ -6,16 +6,15 @@ import {
     deleteRowFromSheet,
     updateRowInSheet,
     getFileData,
+    getFiles,
 } from '../services/excel.service';
-import path from 'path';
+
 const storage = multer.diskStorage({
     destination: function (_req, _file, cb) {
         cb(null, 'src/uploads');
     },
     filename: function (_req, file, cb) {
-        const ext = path.extname(file.originalname);
-
-        cb(null, file.originalname + '-' + Date.now() + ext);
+        cb(null, `${Date.now()}-${file.originalname}`);
     },
 });
 
@@ -31,3 +30,5 @@ fileRoute.delete(
     deleteRowFromSheet,
 );
 fileRoute.get('/:fileId', getFileData);
+
+fileRoute.get('/', getFiles);
