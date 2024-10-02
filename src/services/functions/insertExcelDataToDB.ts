@@ -49,7 +49,7 @@ export const insertExcelDataToDB = async (filePath: string): Promise<void> => {
 
         // Step 3: Tạo document MongoDB cho file Excel
         const newExcelFile = new ExcelFile({
-            fileName: filePath.split('/').pop(), // Lấy tên file từ đường dẫn
+            fileName: getFileName(filePath), // Lấy tên file từ đường dẫn
             sheets,
         });
 
@@ -62,3 +62,9 @@ export const insertExcelDataToDB = async (filePath: string): Promise<void> => {
         throw error;
     }
 };
+
+function getFileName(filePath: string): string {
+    // Split by path separator and get the last part (the filename)
+    const parts = filePath.split('\\'); // For Windows paths
+    return parts[parts.length - 1];
+}

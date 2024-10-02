@@ -161,7 +161,7 @@ export const getFiles = async (_req: Request, res: Response) => {
     try {
         const files = await ExcelFile.find();
         const data = files.map((file) => ({
-            _id: file._id,
+            id: file._id,
             fileName: file.fileName.replace(/^\d+-/, ''),
         }));
         res.json({ data });
