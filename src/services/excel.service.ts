@@ -1,84 +1,153 @@
-import MongoDB from '../db'
-import xlsx from 'xlsx'
-import { Request, Response } from 'express'
-import ExcelFile from '../models/excelFile'
+import { Request, Response } from 'express';
+import ExcelFile from '../models/excelFile';
+import { insertExcelDataToDB } from './functions/insertExcelDataToDB';
+import {} from 'lodash';
 
-export const uploadExcelFile = async (req: Request, res: Response) => {
+export const uploadExcelFile = async (
+    req: Request,
+    res: Response,
+): Promise<void> => {
     try {
         if (!req.file) {
-            res.status(400).send('No file uploaded.')
-            return
+            res.status(400).send('No file uploaded.');
+            return;
         }
 
-        const filePath = req.file.path
+        const filePath = req.file.path;
 
         // Insert the Excel file into the database
-        await insertExcelDataToDB(filePath)
+        await insertExcelDataToDB(filePath);
 
-        res.status(200).send('File successfully processed and data inserted.')
+        res.status(200).send('File successfully processed and data inserted.');
     } catch (error) {
-        console.error('Error processing the file:', error)
-        res.status(500).send('Failed to process the file.')
+        console.error('Error processing the file:', error);
+        res.status(500).send('Failed to process the file.');
     }
-}
+};
 
-export const insertExcelDataToDB = async (filePath: string): Promise<void> => {
+// Thêm hàng mới vào một sheet cụ thể
+export const addRowToSheet = async (
+    req: Request,
+    res: Response,
+): Promise<void> => {
+    const { fileId, sheetName } = req.params;
+    const newRow = req.body;
+
     try {
-        const mongoInstance = MongoDB.getInstance()
-        await mongoInstance.connect()
-
-        const workbook = xlsx.readFile(filePath)
-        const sheetNames = workbook.SheetNames
-
-        // Khởi tạo danh sách sheets
-        const sheets: any[] = []
-
-        for (let i = 0; i < sheetNames.length; i++) {
-            const sheetName = sheetNames[i]
-            const worksheet = workbook.Sheets[sheetName]
-
-            // Chuyển sheet thành dạng JSON, header: 1 để nhận cả tiêu đề
-            const jsonData: string[][] = xlsx.utils.sheet_to_json(worksheet, {
-                header: 1,
-                defval: true
-            })
-
-            if (jsonData.length === 0) {
-                throw new Error('Excel file is empty or has invalid format')
-            }
-
-            // Lấy hàng đầu tiên làm tiêu đề
-            const headers = jsonData[0]
-
-            // Tạo dữ liệu cho các hàng, bắt đầu từ hàng thứ 2
-            const rows = jsonData.slice(1).map((row) => {
-                const rowObject: any = {}
-
-                // Lặp qua từng cell của hàng và khớp với tiêu đề tương ứng
-                row.forEach((cell, index) => {
-                    const headerName = headers[index]
-                    rowObject[headerName] = cell
-                })
-
-                return rowObject
-            })
-
-            // Thêm sheet vào mảng sheets
-            sheets.push({ sheetName, headers, rows })
+        const file = await ExcelFile.findById(fileId);
+        if (!file) {
+            res.status(404).send('File not found.');
+            return;
         }
 
-        // Step 3: Tạo document MongoDB cho file Excel
-        const newExcelFile = new ExcelFile({
-            fileName: filePath.split('/').pop(), // Lấy tên file từ đường dẫn
-            sheets
-        })
+        const sheet = file.sheets.find((s) => s.sheetName === sheetName);
+        if (!sheet) {
+            res.status(404).send('Sheet not found.');
+            return;
+        }
 
-        // Step 4: Lưu vào MongoDB
-        await newExcelFile.save()
+        sheet.rows.push(newRow);
 
-        console.log('File Excel đã được chèn vào MongoDB thành công.')
-    } catch (error) {
-        console.error('Lỗi khi chèn dữ liệu Excel vào MongoDB:', error)
-        throw error
+        await file.save();
+
+        res.status(200).json({ message: 'Row added successfully', file });
+    } catch (error: any) {
+        res.status(500).send('Error adding row: ' + error.message);
     }
-}
+};
+
+// Sửa một hàng trong sheet
+export const updateRowInSheet = async (
+    req: Request,
+    res: Response,
+): Promise<void> => {
+    const { fileId, sheetName, rowIndex: rowIndexString } = req.params;
+    const updatedRow = req.body;
+    const rowIndex = parseInt(rowIndexString);
+
+    try {
+        const file = await ExcelFile.findById(fileId);
+        if (!file) {
+            res.status(404).send('File not found.');
+
+            return;
+        }
+
+        const sheet = file.sheets.find((s) => s.sheetName === sheetName);
+        if (!sheet) {
+            res.status(404).send('Sheet not found.');
+
+            return;
+        }
+
+        if (rowIndex < 0 || rowIndex >= sheet.rows.length) {
+            res.status(400).send('Invalid row index.');
+            return;
+        }
+
+        sheet.rows[rowIndex] = updatedRow;
+
+        await file.updateOne({ $set: { sheets: file.sheets } });
+
+        res.status(200).json({ message: 'Row updated successfully', file });
+    } catch (error: any) {
+        res.status(500).send('Error updating row: ' + error.message);
+    }
+};
+
+// Xóa một hàng khỏi sheet
+export const deleteRowFromSheet = async (
+    req: Request,
+    res: Response,
+): Promise<void> => {
+    const { fileId, sheetName, rowIndex: rowIndexString } = req.params;
+    const rowIndex = parseInt(rowIndexString);
+
+    try {
+        const file = await ExcelFile.findById(fileId);
+        if (!file) {
+            res.status(404).send('File not found.');
+            return;
+        }
+
+        const sheet = file.sheets.find((s) => s.sheetName === sheetName);
+        if (!sheet) {
+            res.status(404).send('Sheet not found.');
+            return;
+        }
+
+        if (rowIndex < 0 || rowIndex >= sheet.rows.length) {
+            res.status(400).send('Invalid row index.');
+            return;
+        }
+
+        sheet.rows.splice(rowIndex, 1);
+
+        await file.save();
+
+        res.status(200).json({ message: 'Row deleted successfully', file });
+    } catch (error: any) {
+        res.status(500).send('Error deleting row: ' + error.message);
+    }
+};
+
+export const getFileData = async (
+    req: Request,
+    res: Response,
+): Promise<void> => {
+    const { fileId } = req.params;
+
+    try {
+        const file = await ExcelFile.findById(fileId);
+
+        if (!file) {
+            res.status(404).send('File not found.');
+
+            return;
+        }
+
+        res.status(200).json(file);
+    } catch (error: any) {
+        res.status(500).send('Error retrieving file data: ' + error.message);
+    }
+};

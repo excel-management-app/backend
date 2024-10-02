@@ -1,4 +1,4 @@
-import mongoose from 'mongoose'
+import mongoose from 'mongoose';
 
 const sheetSchema = new mongoose.Schema({
     sheetName: String,
@@ -6,17 +6,17 @@ const sheetSchema = new mongoose.Schema({
     rows: [
         {
             type: Map,
-            of: String
-        }
-    ]
-})
+            of: String,
+        },
+    ],
+});
 
 const excelFileSchema = new mongoose.Schema({
     fileName: { type: String, required: true },
     uploadedAt: { type: Date, default: Date.now },
-    sheets: [sheetSchema]
-})
+    sheets: [sheetSchema],
+});
 
-const ExcelFile = mongoose.model('ExcelFile', excelFileSchema)
+const ExcelFile = mongoose.model('ExcelFile', excelFileSchema);
 
-export default ExcelFile
+export default ExcelFile;

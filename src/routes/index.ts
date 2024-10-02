@@ -1,9 +1,9 @@
-import { Router } from 'express'
-import { readFileRoute } from './read.route'
-import { fileRoute } from './file.route'
+import { Router } from 'express';
+import { readFileRoute } from './read.route';
+import { fileRoute } from './file.route';
 
-export const appRouter = Router()
+export const appRouter = Router();
 
-appRouter.use('/read', readFileRoute)
+appRouter.use('/read', readFileRoute);
 
-appRouter.use('/file', fileRoute)
+appRouter.use('/files', fileRoute);
