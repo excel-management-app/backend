@@ -7,6 +7,14 @@ const ConfigSchema = new Schema({
     type: Object,
     required: true
   },
+  fileName:{
+    type: String,
+    required: true
+  },
+  sheets: {
+    type: Array,
+    required: true
+  },
   createdAt: {
     type: Date,
     default: Date.now
