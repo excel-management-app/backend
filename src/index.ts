@@ -5,6 +5,7 @@ import helmet from 'helmet'
 import compression from 'compression'
 import cors from 'cors'
 import { appRouter } from './routes/index'
+import MongoDB from './db/index'
 
 // load .env
 dotenv.config()
@@ -31,10 +32,19 @@ app.use(appRouter)
 
 const PORT = process.env.PORT || 3001
 
+// MongoDB connection
+async function connectToMongoDB() {
+    await MongoDB.getInstance().connect()
+}
+
 app.get('/', (_req: Request, res: Response) => {
     res.send('Hello World!')
 })
 
 app.listen(PORT, () => {
+    connectToMongoDB().catch((err) =>
+        console.error('Error connecting to MongoDB:', err)
+    )
+
     console.log(`Server is running on port ${PORT}`)
 })

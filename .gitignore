@@ -21,3 +21,6 @@ yarn.lock
 .vscode
 note.txt
 .vercel
+
+# files
+src/uploads/
