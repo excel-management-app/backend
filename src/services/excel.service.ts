@@ -32,7 +32,7 @@ export const addRowToSheet = async (
 ): Promise<void> => {
     const { fileId, sheetName } = req.params;
     const newRow = req.body.data;
-    console.log(newRow);
+
     try {
         const file = await ExcelFile.findById(fileId);
         if (!file) {
@@ -50,7 +50,7 @@ export const addRowToSheet = async (
 
         await file.save();
 
-        res.status(200).json({ message: 'Row added successfully', data: file });
+        res.status(200).json({ message: 'Row added successfully' });
     } catch (error: any) {
         res.status(500).send('Error adding row: ' + error.message);
     }
