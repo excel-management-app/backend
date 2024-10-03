@@ -20,7 +20,7 @@ export const insertExcelDataToDB = async (filePath: string): Promise<void> => {
             // Chuyển sheet thành dạng JSON, header: 1 để nhận cả tiêu đề
             const jsonData: string[][] = xlsx.utils.sheet_to_json(worksheet, {
                 header: 1,
-                defval: true,
+                defval: '',
             });
 
             if (jsonData.length === 0) {
