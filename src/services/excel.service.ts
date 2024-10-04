@@ -6,7 +6,6 @@ import {
     exportExcelDataFromDB,
     OUTPUT_FILE_PATH,
 } from './functions/exportExcelDataFromDB';
-import path from 'path';
 
 export const uploadExcelFile = async (
     req: Request,
@@ -185,11 +184,13 @@ export const exportFile = async (
 
     try {
         await exportExcelDataFromDB({ fileId });
-        const filePath = path.resolve(
-            `${OUTPUT_FILE_PATH}exported_file${fileId}.xlsx`,
-        );
-
-        res.sendFile(filePath);
+        const filePath = `${OUTPUT_FILE_PATH}exported_file${fileId}.xlsx`;
+        res.download(filePath, 'exported_file.xlsx', (err) => {
+            if (err) {
+                console.error(err);
+                res.status(500).send('Error downloading the file.');
+            }
+        });
     } catch (error) {
         console.error(error);
         res.status(500).send('Error exporting file');
