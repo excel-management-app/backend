@@ -7,6 +7,7 @@ import {
     updateRowInSheet,
     getFileData,
     getFiles,
+    exportFile,
 } from '../services/excel.service';
 
 const storage = multer.diskStorage({
@@ -32,3 +33,5 @@ fileRoute.delete(
 fileRoute.get('/:fileId', getFileData);
 
 fileRoute.get('/', getFiles);
+
+fileRoute.post('/export/:fileId', exportFile);
