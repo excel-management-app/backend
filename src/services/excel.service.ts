@@ -2,7 +2,11 @@ import { Request, Response } from 'express';
 import ExcelFile from '../models/excelFile';
 import { insertExcelDataToDB } from './functions/insertExcelDataToDB';
 import {} from 'lodash';
-import { exportExcelDataFromDB } from './functions/exportExcelDataFromDB';
+import {
+    exportExcelDataFromDB,
+    OUTPUT_FILE_PATH,
+} from './functions/exportExcelDataFromDB';
+import path from 'path';
 
 export const uploadExcelFile = async (
     req: Request,
@@ -181,8 +185,11 @@ export const exportFile = async (
 
     try {
         await exportExcelDataFromDB({ fileId });
+        const filePath = path.resolve(
+            `${OUTPUT_FILE_PATH}exported_file${fileId}.xlsx`,
+        );
 
-        res.status(200).send('File exported successfully');
+        res.sendFile(filePath);
     } catch (error) {
         console.error(error);
         res.status(500).send('Error exporting file');

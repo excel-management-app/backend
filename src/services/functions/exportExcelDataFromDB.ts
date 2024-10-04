@@ -4,7 +4,7 @@ import ExcelFile from '../../models/excelFile';
 import { RowData } from '../types';
 
 const EXPORT_TEMPLATE_PATH = 'src/files/templates/export_template.xlsx';
-const OUTPUT_FILE_PATH = 'src/files/exports/exported_file.xlsx';
+export const OUTPUT_FILE_PATH = 'src/files/exports/';
 export async function exportExcelDataFromDB({ fileId }: { fileId: string }) {
     try {
         const mongoInstance = MongoDB.getInstance();
@@ -55,7 +55,9 @@ export async function exportExcelDataFromDB({ fileId }: { fileId: string }) {
             });
         });
 
-        await workbook.xlsx.writeFile(OUTPUT_FILE_PATH);
+        await workbook.xlsx.writeFile(
+            `${OUTPUT_FILE_PATH}exported_file${fileId}.xlsx`,
+        );
     } catch (error) {
         console.error(error);
         throw error;
