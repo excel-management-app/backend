@@ -7,6 +7,7 @@ import {
     updateRowInSheet,
     getFileData,
     getFiles,
+    exportFile,
 } from '../services/excel.service';
 
 const storage = multer.diskStorage({
@@ -23,12 +24,16 @@ const upload = multer({ storage });
 export const fileRoute = express.Router();
 
 fileRoute.post('/upload', upload.single('file'), uploadExcelFile);
-fileRoute.post('/:fileId/sheets/:sheetName/rows', addRowToSheet);
+
 fileRoute.put('/:fileId/sheets/:sheetName/rows/:rowIndex', updateRowInSheet);
+fileRoute.post('/:fileId/sheets/:sheetName/rows', addRowToSheet);
+
 fileRoute.delete(
     '/:fileId/sheets/:sheetName/rows/:rowIndex',
     deleteRowFromSheet,
 );
+
+fileRoute.get('/:fileId/export', exportFile);
 fileRoute.get('/:fileId', getFileData);
 
 fileRoute.get('/', getFiles);

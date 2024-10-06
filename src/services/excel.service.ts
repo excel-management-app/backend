@@ -2,6 +2,10 @@ import { Request, Response } from 'express';
 import ExcelFile from '../models/excelFile';
 import { insertExcelDataToDB } from './functions/insertExcelDataToDB';
 import {} from 'lodash';
+import {
+    exportExcelDataFromDB,
+    OUTPUT_FILE_PATH,
+} from './functions/exportExcelDataFromDB';
 
 export const uploadExcelFile = async (
     req: Request,
@@ -168,5 +172,27 @@ export const getFiles = async (_req: Request, res: Response) => {
     } catch (error) {
         console.error(error);
         res.status(500).send('Error retrieving files');
+    }
+};
+
+// export file
+export const exportFile = async (
+    req: Request,
+    res: Response,
+): Promise<void> => {
+    const { fileId } = req.params;
+
+    try {
+        await exportExcelDataFromDB({ fileId });
+        const filePath = `${OUTPUT_FILE_PATH}exported_file${fileId}.xlsx`;
+        res.download(filePath, 'exported_file.xlsx', (err) => {
+            if (err) {
+                console.error(err);
+                res.status(500).send('Error downloading the file.');
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error exporting file');
     }
 };
