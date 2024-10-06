@@ -66,7 +66,7 @@ export const updateRowInSheet = async (
     res: Response,
 ): Promise<void> => {
     const { fileId, sheetName, rowIndex: rowIndexString } = req.params;
-    const updatedRow = req.body;
+    const updatedRow = req.body.data;
     const rowIndex = parseInt(rowIndexString);
 
     try {
