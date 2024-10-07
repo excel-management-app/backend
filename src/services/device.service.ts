@@ -25,6 +25,11 @@ export const updateDevice = async (req: Request, res: Response) => {
 };
 
 export const createDevice = async (req: Request, res: Response) => {
+    const isExist = await Device.findOne({ name: req.body.data.name });
+    if (isExist) {
+        res.status(400).send('Tên đã được sử dụng trên hệ thống');
+        return;
+    }
     const device = new Device(req.body.data);
     await device.save();
     res.status(200).json({ data: device });
