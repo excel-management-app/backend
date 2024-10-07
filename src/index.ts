@@ -30,8 +30,8 @@ app.use(compression());
 app.use(helmet());
 app.use(
     cors({
-        origin: 'http://localhost:3000',
         credentials: true,
+        origin: true,
     }),
 );
 //cookie
@@ -86,7 +86,7 @@ app.use(async (req, res, next) => {
 // routes
 app.use(appRouter);
 
-const PORT = process.env.PORT || 3001;
+const PORT = parseInt(process.env.PORT || '') || 3001;
 
 // MongoDB connection
 async function connectToMongoDB() {
@@ -107,7 +107,7 @@ app.get('/', async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     connectToMongoDB().catch((err) =>
         console.error('Error connecting to MongoDB:', err),
     );
