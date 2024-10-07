@@ -20,7 +20,6 @@ export const exportDataToword = async (
     const rowIndex = parseInt(rowIndexString);
     const cookieDevice = req.cookies.deviceCookie;
 
-    
     const file = await ExcelFile.findById(fileId);
     if (!file) {
         res.status(404).send('File not found.');
@@ -40,55 +39,57 @@ export const exportDataToword = async (
         return;
     }
     const content = fs.readFileSync(
-        path.resolve(__dirname, "../uploads/fileTest.docx"),
-        "binary"
-      );
-      
+        path.resolve(__dirname, '../uploads/fileTest.docx'),
+        'binary',
+    );
+
     const zip = new PizZip(content);
     const doc = new Docxtemplater(zip);
-    
+
     const dataDB = sheet.rows[rowIndex];
     const dataToWord = dataDB.toJSON();
     doc.setData(dataToWord);
 
     try {
-        doc.render();  
+        doc.render();
     } catch (error: any) {
         res.status(500).send('Error generate data to Word' + error.message);
     }
-      
-    const buf = doc.getZip().generate({ type: "nodebuffer" });
-    fs.writeFileSync(path.resolve(__dirname, "../uploads/output.docx"), buf);
+
+    const buf = doc.getZip().generate({ type: 'nodebuffer' });
+    fs.writeFileSync(path.resolve(__dirname, '../uploads/output.docx'), buf);
 
     // get data localstorage
     var statistic = localStorage.getItem('statistic');
-    let today = new Date()
+    let today = new Date();
     var keyDate = formatDate(today); // lấy ra ngày hôm nay định dạng dd/mm/yyyy
     if (!statistic) {
         let obj: { [key: string]: { [key: string]: number } } = {}; // khai báo định dạng obj
-        
+
         var keyDevice = cookieDevice; // nếu file trống lần đầu thì thêm data ban đầu
         obj[keyDate] = {
-          [keyDevice]: 1
+            [keyDevice]: 1,
         };
         statistic = JSON.stringify(obj);
     } else {
-        var dataObj = JSON.parse(statistic);  //parse data ra object
-        if (keyDate in dataObj) { // kiểm tra đã có dữ liệu ngày hôm nay chưa
-          var dataDate = dataObj[keyDate];
-          if (cookieDevice in dataDate) {// kiểm tra ngày hôm nay thiết bị đã xuất file nào chưa
-            var count = dataDate[cookieDevice]+=1;
-          } else {
-            dataDate[cookieDevice] = 1;
-          }
+        var dataObj = JSON.parse(statistic); //parse data ra object
+        if (keyDate in dataObj) {
+            // kiểm tra đã có dữ liệu ngày hôm nay chưa
+            var dataDate = dataObj[keyDate];
+            if (cookieDevice in dataDate) {
+                // kiểm tra ngày hôm nay thiết bị đã xuất file nào chưa
+                var count = (dataDate[cookieDevice] += 1);
+            } else {
+                dataDate[cookieDevice] = 1;
+            }
         } else {
-          dataObj[keyDate] = {
-            [cookieDevice]: 1
-          };
+            dataObj[keyDate] = {
+                [cookieDevice]: 1,
+            };
         }
         statistic = JSON.stringify(dataObj);
     }
-    localStorage.setItem('statistic', statistic);  // lưu lại dữ liệu
+    localStorage.setItem('statistic', statistic); // lưu lại dữ liệu
 
-    res.status(200).json({ message: 'Generate data to word successfully', });
+    res.status(200).json({ message: 'Generate data to word successfully' });
 };

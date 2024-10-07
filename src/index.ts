@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express';
 import dotenv from 'dotenv';
 import morgan from 'morgan';
 import helmet from 'helmet';
-import cookieParser from 'cookie-parser'
+import cookieParser from 'cookie-parser';
 import compression from 'compression';
 import cors from 'cors';
 import { appRouter } from './routes/index';
@@ -30,12 +30,11 @@ app.use((req, res, next) => {
         res.cookie('deviceCookie', deviceId, {
             maxAge: 365 * 24 * 60 * 60 * 1000, // gia hạn 1 năm cookie
             httpOnly: true, // Cookie chỉ có thể được truy cập bởi máy chủ
-            sameSite: 'strict' // Cookie chỉ được gửi từ cùng trang web
+            sameSite: 'strict', // Cookie chỉ được gửi từ cùng trang web
         });
     }
     next();
 });
-
 
 // use morgan
 app.use(morgan('combined'));
