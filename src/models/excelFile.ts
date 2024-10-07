@@ -8,7 +8,7 @@ const sheetSchema = new mongoose.Schema({
             type: Map,
             of: new mongoose.Schema({
                 value: String,
-                cookieDevice: String, // Thêm cookie vào mỗi đối tượng
+                cookieDeviceId: String, // Thêm cookie vào mỗi đối tượng
             }),
         },
     ],

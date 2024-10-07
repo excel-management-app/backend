@@ -1,6 +1,7 @@
 import MongoDB from '../../db';
 import xlsx from 'xlsx';
 import ExcelFile from '../../models/excelFile';
+import { compact } from 'lodash';
 
 export const insertExcelDataToDB = async (filePath: string): Promise<void> => {
     try {
@@ -10,7 +11,6 @@ export const insertExcelDataToDB = async (filePath: string): Promise<void> => {
         const workbook = xlsx.readFile(filePath);
         const sheetNames = workbook.SheetNames;
 
-        // Khởi tạo danh sách sheets
         const sheets: any[] = [];
 
         for (let i = 0; i < sheetNames.length; i++) {
@@ -20,7 +20,7 @@ export const insertExcelDataToDB = async (filePath: string): Promise<void> => {
             // Chuyển sheet thành dạng JSON, header: 1 để nhận cả tiêu đề
             const jsonData: string[][] = xlsx.utils.sheet_to_json(worksheet, {
                 header: 1,
-                defval: true,
+                defval: '',
             });
 
             if (jsonData.length === 0) {
@@ -28,7 +28,7 @@ export const insertExcelDataToDB = async (filePath: string): Promise<void> => {
             }
 
             // Lấy hàng đầu tiên làm tiêu đề
-            const headers = jsonData[0];
+            const headers = compact(jsonData[0]);
 
             // Tạo dữ liệu cho các hàng, bắt đầu từ hàng thứ 2
             const rows = jsonData.slice(1).map((row) => {
@@ -43,17 +43,14 @@ export const insertExcelDataToDB = async (filePath: string): Promise<void> => {
                 return rowObject;
             });
 
-            // Thêm sheet vào mảng sheets
             sheets.push({ sheetName, headers, rows });
         }
 
-        // Step 3: Tạo document MongoDB cho file Excel
         const newExcelFile = new ExcelFile({
-            fileName: filePath.split('/').pop(), // Lấy tên file từ đường dẫn
+            fileName: getFileName(filePath),
             sheets,
         });
 
-        // Step 4: Lưu vào MongoDB
         await newExcelFile.save();
 
         console.log('File Excel đã được chèn vào MongoDB thành công.');
@@ -62,3 +59,10 @@ export const insertExcelDataToDB = async (filePath: string): Promise<void> => {
         throw error;
     }
 };
+
+function getFileName(filePath: string): string {
+    //  Split by both '/' and '\\' to support both Unix and Windows paths
+    const parts = filePath.split(/[/\\]/);
+    const fileNameWithPrefix = parts[parts.length - 1];
+    return fileNameWithPrefix.replace(/^\d+-/, '');
+}

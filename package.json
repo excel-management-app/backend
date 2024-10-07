@@ -22,11 +22,13 @@
     },
     "homepage": "https://github.com/excel-management-app/backend#readme",
     "dependencies": {
+        "@types/xlsx": "^0.0.35",
         "compression": "^1.7.4",
         "cookie-parser": "^1.4.6",
         "cors": "^2.8.5",
         "docxtemplater": "^3.50.0",
         "dotenv": "^16.4.5",
+        "exceljs": "^4.4.0",
         "express": "^4.21.0",
         "helmet": "^8.0.0",
         "lodash": "^4.17.21",

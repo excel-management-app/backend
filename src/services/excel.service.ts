@@ -2,6 +2,10 @@ import { Request, Response } from 'express';
 import ExcelFile from '../models/excelFile';
 import { insertExcelDataToDB } from './functions/insertExcelDataToDB';
 import {} from 'lodash';
+import {
+    exportExcelDataFromDB,
+    OUTPUT_FILE_PATH,
+} from './functions/exportExcelDataFromDB';
 
 export const uploadExcelFile = async (
     req: Request,
@@ -31,8 +35,9 @@ export const addRowToSheet = async (
     res: Response,
 ): Promise<void> => {
     const { fileId, sheetName } = req.params;
-    const newRowData = req.body;
-    const cookieDevice = req.cookies.deviceCookie;
+    const newRowData = req.body.data;
+    const cookieDeviceId = req.cookies.cookieDeviceId;
+
     try {
         const file = await ExcelFile.findById(fileId);
         if (!file) {
@@ -46,15 +51,14 @@ export const addRowToSheet = async (
             return;
         }
 
-        const newRow = new Map(Object.entries(newRowData));
-        newRow.set('cookieDevice', cookieDevice);
-        
-        sheet.rows.push(newRow);
-
+        sheet.rows.push({
+            ...newRowData,
+            cookieDeviceId,
+        });
 
         await file.save();
 
-        res.status(200).json({ message: 'Row added successfully', file });
+        res.status(200).json({ message: 'Row added successfully' });
     } catch (error: any) {
         res.status(500).send('Error adding row: ' + error.message);
     }
@@ -66,7 +70,7 @@ export const updateRowInSheet = async (
     res: Response,
 ): Promise<void> => {
     const { fileId, sheetName, rowIndex: rowIndexString } = req.params;
-    const updatedRow = req.body;
+    const updatedRow = req.body.data;
     const rowIndex = parseInt(rowIndexString);
     const cookieDevice = req.cookies.deviceCookie;
 
@@ -91,21 +95,23 @@ export const updateRowInSheet = async (
         }
         const cookieRow = sheet.rows[rowIndex].get('cookieDevice');
 
-        if(cookieRow !=  cookieDevice) {
+        if (cookieRow != cookieDevice) {
             res.status(400).send('Permission denied');
             return;
         }
-        
+
         const newRow = {
             ...updatedRow,
-            cookieDevice: cookieDevice
+            cookieDevice: cookieDevice,
         };
 
         sheet.rows[rowIndex] = newRow;
 
         await file.updateOne({ $set: { sheets: file.sheets } });
 
-        res.status(200).json({ message: 'Row updated successfully', file });
+        res.status(200).json({
+            message: 'Row updated successfully',
+        });
     } catch (error: any) {
         res.status(500).send('Error updating row: ' + error.message);
     }
@@ -141,7 +147,9 @@ export const deleteRowFromSheet = async (
 
         await file.save();
 
-        res.status(200).json({ message: 'Row deleted successfully', file });
+        res.status(200).json({
+            message: 'Row deleted successfully',
+        });
     } catch (error: any) {
         res.status(500).send('Error deleting row: ' + error.message);
     }
@@ -162,8 +170,45 @@ export const getFileData = async (
             return;
         }
 
-        res.status(200).json(file);
+        res.status(200).json({ data: file });
     } catch (error: any) {
         res.status(500).send('Error retrieving file data: ' + error.message);
+    }
+};
+
+// get files
+export const getFiles = async (_req: Request, res: Response) => {
+    try {
+        const files = await ExcelFile.find();
+        const data = files.map((file) => ({
+            id: file._id,
+            fileName: file.fileName.replace(/^\d+-/, ''),
+        }));
+        res.json({ data });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error retrieving files');
+    }
+};
+
+// export file
+export const exportFile = async (
+    req: Request,
+    res: Response,
+): Promise<void> => {
+    const { fileId } = req.params;
+
+    try {
+        await exportExcelDataFromDB({ fileId });
+        const filePath = `${OUTPUT_FILE_PATH}exported_file${fileId}.xlsx`;
+        res.download(filePath, 'exported_file.xlsx', (err) => {
+            if (err) {
+                console.error(err);
+                res.status(500).send('Error downloading the file.');
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error exporting file');
     }
 };
