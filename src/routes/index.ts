@@ -9,4 +9,4 @@ appRouter.use('/files', fileRoute);
 
 appRouter.use('/words', wordRoute);
 
-appRouter.use('/device', deviceRoute);
+appRouter.use('/devices', deviceRoute);

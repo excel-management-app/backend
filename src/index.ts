@@ -1,14 +1,11 @@
 import compression from 'compression';
-import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import MongoDB from './db/index';
-import Device from './models/device';
 import { appRouter } from './routes/index';
-import { getClientIp } from './utils/getClientIp';
 
 // load .env
 dotenv.config();
@@ -29,83 +26,13 @@ app.use(compression());
 // security
 app.use(helmet());
 
-// Configure CORS options
-const corsOptions = {
-    origin: (
-        origin: string | undefined,
-        callback: (err: Error | null, allow?: boolean) => void,
-    ) => {
-        // Allow requests with no origin (e.g. mobile apps, curl requests)
-        if (!origin) {
-            return callback(null, true);
-        }
-        // Customize allowed origins here if needed
-        const allowedOrigins = [
-            'http://172.27.92.161:3000',
-            'http://localhost:3000',
-        ];
-        if (allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-
-    credentials: true,
-};
-
 // Apply CORS middleware
-app.use(cors(corsOptions));
+app.use(
+    cors({
+        origin: '*',
+    }),
+);
 
-//cookie
-app.use(cookieParser());
-const COOKIE_MAX_AGE = 1000 * 60 * 60 * 24 * 365; // 1 year
-
-app.use(async (req, res, next) => {
-    try {
-        const deviceId = req.cookies.deviceId
-            ? String(req.cookies.deviceId)
-            : '';
-        // random name for device
-        const randomName = `Device-${Date.now()}`;
-        const ipAddress = getClientIp(req);
-
-        if (!deviceId) {
-            const newDevice = new Device({
-                ip: ipAddress,
-                name: randomName,
-            });
-            await newDevice.save();
-            res.cookie('deviceId', newDevice._id.toString(), {
-                maxAge: COOKIE_MAX_AGE,
-                httpOnly: true,
-            });
-        } else {
-            const device = await Device.findById(deviceId);
-            if (device) {
-                res.cookie('deviceId', device._id, {
-                    maxAge: COOKIE_MAX_AGE,
-                    httpOnly: true,
-                });
-            } else {
-                const newDevice = new Device({
-                    ip: ipAddress,
-                    name: randomName,
-                });
-                await newDevice.save();
-                res.cookie('deviceId', newDevice._id, {
-                    maxAge: COOKIE_MAX_AGE,
-                    httpOnly: true,
-                });
-            }
-        }
-
-        next();
-    } catch (error) {
-        console.error('Error processing device:', error);
-        res.status(500).send('Server error');
-    }
-});
 // routes
 app.use(appRouter);
 
@@ -115,20 +42,6 @@ const PORT = process.env.PORT || 3001;
 async function connectToMongoDB() {
     await MongoDB.getInstance().connect();
 }
-
-app.get('/', async (req, res) => {
-    const deviceId = req.cookies.deviceId;
-
-    const device = await Device.findById(deviceId);
-
-    if (device) {
-        res.send(
-            `Hello! Your device ID is ${deviceId} and your IP is ${device.ip}`,
-        );
-    } else {
-        res.send('Device not found.');
-    }
-});
 
 app.listen(PORT, () => {
     connectToMongoDB().catch((err) =>
