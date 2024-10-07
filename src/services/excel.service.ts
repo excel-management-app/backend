@@ -51,15 +51,25 @@ export const addRowToSheet = async (
             res.status(404).send('Sheet not found.');
             return;
         }
+
         const query = {
             _id: fileId,
             'sheets.sheetName': sheetName,
             'sheets.rows': {
                 $elemMatch: {
-                    $and: [
-                        ...Object.entries(newRowData).map(([key, value]) => ({
-                            [key]: value,
-                        })),
+                    $or: [
+                        {
+                            $and: [
+                                ...Object.entries(newRowData).map(
+                                    ([key, value]) => ({
+                                        [key]: value,
+                                    }),
+                                ),
+                            ],
+                        },
+                        {
+                            tamY: newRowData.tamY,
+                        },
                     ],
                 },
             },
