@@ -35,7 +35,8 @@ export const addRowToSheet = async (
     res: Response,
 ): Promise<void> => {
     const { fileId, sheetName } = req.params;
-    const newRow = req.body.data;
+    const newRowData = req.body.data;
+    const cookieDeviceId = req.cookies.cookieDeviceId;
 
     try {
         const file = await ExcelFile.findById(fileId);
@@ -50,7 +51,10 @@ export const addRowToSheet = async (
             return;
         }
 
-        sheet.rows.push(newRow);
+        sheet.rows.push({
+            ...newRowData,
+            cookieDeviceId,
+        });
 
         await file.save();
 
@@ -68,6 +72,7 @@ export const updateRowInSheet = async (
     const { fileId, sheetName, rowIndex: rowIndexString } = req.params;
     const updatedRow = req.body.data;
     const rowIndex = parseInt(rowIndexString);
+    const cookieDevice = req.cookies.deviceCookie;
 
     try {
         const file = await ExcelFile.findById(fileId);
@@ -88,8 +93,19 @@ export const updateRowInSheet = async (
             res.status(400).send('Invalid row index.');
             return;
         }
+        const cookieRow = sheet.rows[rowIndex].get('cookieDevice');
 
-        sheet.rows[rowIndex] = updatedRow;
+        if (cookieRow != cookieDevice) {
+            res.status(400).send('Permission denied');
+            return;
+        }
+
+        const newRow = {
+            ...updatedRow,
+            cookieDevice: cookieDevice,
+        };
+
+        sheet.rows[rowIndex] = newRow;
 
         await file.updateOne({ $set: { sheets: file.sheets } });
 
