@@ -69,7 +69,7 @@ export const addRowToSheet = async (
         const isRowExists = await ExcelFile.exists(query);
 
         if (isRowExists) {
-            res.status(409).send('Dữ liệu đã được thêm vào');
+            res.status(409).send('Hàng đã tồn tại trong sheet');
             return;
         }
         sheet.rows.push({
@@ -79,7 +79,7 @@ export const addRowToSheet = async (
 
         await file.save();
 
-        res.status(200);
+        res.status(200).send('Row added successfully');
     } catch (error: any) {
         res.status(500).send('Error adding row: ' + error.message);
     }
@@ -117,7 +117,9 @@ export const updateRowInSheet = async (
         const cookieDeviceRowId = sheet.rows[rowIndex].get('deviceId');
 
         if (cookieDeviceRowId != deviceId) {
-            res.status(400).send('Permission denied');
+            res.status(400).send(
+                'Bạn không có quyền sửa hàng này. Hàng này do một người khác tạo',
+            );
             return;
         }
 

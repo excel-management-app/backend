@@ -28,12 +28,35 @@ app.use(compression());
 
 // security
 app.use(helmet());
-app.use(
-    cors({
-        origin: 'http://localhost:3000',
-        credentials: true,
-    }),
-);
+
+// Configure CORS options
+const corsOptions = {
+    origin: (
+        origin: string | undefined,
+        callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
+        // Allow requests with no origin (e.g. mobile apps, curl requests)
+        if (!origin) {
+            return callback(null, true);
+        }
+        // Customize allowed origins here if needed
+        const allowedOrigins = [
+            'http://172.27.92.161:3000',
+            'http://localhost:3000',
+        ];
+        if (allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+
+    credentials: true,
+};
+
+// Apply CORS middleware
+app.use(cors(corsOptions));
+
 //cookie
 app.use(cookieParser());
 const COOKIE_MAX_AGE = 1000 * 60 * 60 * 24 * 365; // 1 year
