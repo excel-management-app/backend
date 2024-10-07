@@ -50,7 +50,27 @@ export const addRowToSheet = async (
             res.status(404).send('Sheet not found.');
             return;
         }
+        const query = {
+            _id: fileId,
+            'sheets.sheetName': sheetName,
+            'sheets.rows': {
+                $elemMatch: {
+                    $and: [
+                        ...Object.entries(newRowData).map(([key, value]) => ({
+                            [key]: value,
+                        })),
+                    ],
+                },
+            },
+        };
 
+        // Check if such a row already exists
+        const isRowExists = await ExcelFile.exists(query);
+
+        if (isRowExists) {
+            res.status(409).send('Dữ liệu đã được thêm vào');
+            return;
+        }
         sheet.rows.push({
             ...newRowData,
             deviceId,
@@ -58,7 +78,7 @@ export const addRowToSheet = async (
 
         await file.save();
 
-        res.status(200).json({ message: 'Row added successfully' });
+        res.status(200);
     } catch (error: any) {
         res.status(500).send('Error adding row: ' + error.message);
     }
