@@ -1,5 +1,3 @@
-// src/MongoSingleton.ts
-
 import mongoose, { Connection } from 'mongoose';
 
 class MongoDB {
@@ -8,9 +6,7 @@ class MongoDB {
     private dbConnection: Connection | null = null;
     private readonly mongoURI: string = process.env.MONGO_URI || '';
 
-    private constructor() {
-        // private constructor ensures Singleton pattern
-    }
+    private constructor() {}
 
     public static getInstance(): MongoDB {
         if (!MongoDB.instance) {
@@ -21,7 +17,7 @@ class MongoDB {
 
     public async connect(): Promise<Connection> {
         if (this.dbConnection) {
-            return this.dbConnection; // Return existing connection if already established
+            return this.dbConnection;
         }
 
         try {

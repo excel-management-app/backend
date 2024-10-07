@@ -6,6 +6,7 @@ import {
     OUTPUT_FILE_PATH,
 } from './functions/exportExcelDataFromDB';
 import { countRowsByDevice } from './functions/countRowsByDevice';
+import { getDeviceIdFromCookies } from './functions/getDeviceIdFromCookies';
 
 export const uploadExcelFile = async (
     req: Request,
@@ -36,7 +37,7 @@ export const addRowToSheet = async (
 ): Promise<void> => {
     const { fileId, sheetName } = req.params;
     const newRowData = req.body.data;
-    const deviceId = req.cookies.deviceId ? String(req.cookies.deviceId) : '';
+    const deviceId = getDeviceIdFromCookies(req);
 
     try {
         const file = await ExcelFile.findById(fileId);
@@ -92,7 +93,7 @@ export const updateRowInSheet = async (
     const { fileId, sheetName, rowIndex: rowIndexString } = req.params;
     const updatedRow = req.body.data;
     const rowIndex = parseInt(rowIndexString);
-    const deviceId = req.cookies.deviceId;
+    const deviceId = getDeviceIdFromCookies(req);
 
     try {
         const file = await ExcelFile.findById(fileId);
@@ -234,7 +235,7 @@ export const exportFile = async (
 };
 
 export const countRowsByDeviceId = async (req: Request, res: Response) => {
-    const deviceId = req.cookies.deviceId ? String(req.cookies.deviceId) : '';
+    const deviceId = getDeviceIdFromCookies(req);
     const fileId = req.params.fileId;
     const sheetName = req.params.sheetName;
     if (!deviceId) {

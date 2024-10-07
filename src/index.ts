@@ -43,12 +43,14 @@ app.use(async (req, res, next) => {
         const deviceId = req.cookies.deviceId
             ? String(req.cookies.deviceId)
             : '';
-
+        // random name for device
+        const randomName = `Device-${Date.now()}`;
         const ipAddress = getClientIp(req);
 
         if (!deviceId) {
             const newDevice = new Device({
                 ip: ipAddress,
+                name: randomName,
             });
             await newDevice.save();
             res.cookie('deviceId', newDevice._id.toString(), {
@@ -65,6 +67,7 @@ app.use(async (req, res, next) => {
             } else {
                 const newDevice = new Device({
                     ip: ipAddress,
+                    name: randomName,
                 });
                 await newDevice.save();
                 res.cookie('deviceId', newDevice._id, {
