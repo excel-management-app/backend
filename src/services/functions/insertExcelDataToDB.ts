@@ -52,8 +52,6 @@ export const insertExcelDataToDB = async (filePath: string): Promise<void> => {
         });
 
         await newExcelFile.save();
-
-        console.log('File Excel đã được chèn vào MongoDB thành công.');
     } catch (error) {
         console.error('Lỗi khi chèn dữ liệu Excel vào MongoDB:', error);
         throw error;

@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
 import ExcelFile from '../models/excelFile';
 import { insertExcelDataToDB } from './functions/insertExcelDataToDB';
-import {} from 'lodash';
 import {
     exportExcelDataFromDB,
     OUTPUT_FILE_PATH,
 } from './functions/exportExcelDataFromDB';
+import { countRowsByDevice } from './functions/countRowsByDevice';
 
 export const uploadExcelFile = async (
     req: Request,
@@ -36,7 +36,7 @@ export const addRowToSheet = async (
 ): Promise<void> => {
     const { fileId, sheetName } = req.params;
     const newRowData = req.body.data;
-    const cookieDeviceId = req.cookies.cookieDeviceId;
+    const deviceId = req.cookies.deviceId ? String(req.cookies.deviceId) : '';
 
     try {
         const file = await ExcelFile.findById(fileId);
@@ -53,7 +53,7 @@ export const addRowToSheet = async (
 
         sheet.rows.push({
             ...newRowData,
-            cookieDeviceId,
+            deviceId,
         });
 
         await file.save();
@@ -72,7 +72,7 @@ export const updateRowInSheet = async (
     const { fileId, sheetName, rowIndex: rowIndexString } = req.params;
     const updatedRow = req.body.data;
     const rowIndex = parseInt(rowIndexString);
-    const cookieDevice = req.cookies.deviceCookie;
+    const deviceId = req.cookies.deviceId;
 
     try {
         const file = await ExcelFile.findById(fileId);
@@ -93,16 +93,16 @@ export const updateRowInSheet = async (
             res.status(400).send('Invalid row index.');
             return;
         }
-        const cookieRow = sheet.rows[rowIndex].get('cookieDevice');
+        const cookieDeviceRowId = sheet.rows[rowIndex].get('deviceId');
 
-        if (cookieRow != cookieDevice) {
+        if (cookieDeviceRowId != deviceId) {
             res.status(400).send('Permission denied');
             return;
         }
 
         const newRow = {
             ...updatedRow,
-            cookieDevice: cookieDevice,
+            deviceId,
         };
 
         sheet.rows[rowIndex] = newRow;
@@ -211,4 +211,30 @@ export const exportFile = async (
         console.error(error);
         res.status(500).send('Error exporting file');
     }
+};
+
+export const countRowsByDeviceId = async (req: Request, res: Response) => {
+    const deviceId = req.cookies.deviceId ? String(req.cookies.deviceId) : '';
+    const fileId = req.params.fileId;
+    const sheetName = req.params.sheetName;
+    if (!deviceId) {
+        res.status(401).send('Unauthorized');
+        return;
+    }
+    if (!fileId) {
+        res.status(400).send('No file id provided');
+        return;
+    }
+    if (!sheetName) {
+        res.status(400).send('No sheet name provided');
+        return;
+    }
+    const result = await countRowsByDevice({
+        deviceId,
+        fileId,
+        sheetName,
+    });
+    res.status(200).json({
+        data: result,
+    });
 };

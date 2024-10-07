@@ -8,7 +8,10 @@ const sheetSchema = new mongoose.Schema({
             type: Map,
             of: new mongoose.Schema({
                 value: String,
-                cookieDeviceId: String, // Thêm cookie vào mỗi đối tượng
+                deviceId: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: 'Device',
+                },
             }),
         },
     ],
