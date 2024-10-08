@@ -23,6 +23,7 @@
     "homepage": "https://github.com/excel-management-app/backend#readme",
     "dependencies": {
         "@types/xlsx": "^0.0.35",
+        "archiver": "^7.0.1",
         "compression": "^1.7.4",
         "cookie-parser": "^1.4.6",
         "cors": "^2.8.5",
@@ -43,6 +44,7 @@
     },
     "devDependencies": {
         "@eslint/js": "^8.57.1",
+        "@types/archiver": "^6.0.2",
         "@types/compression": "^1.7.5",
         "@types/cookie-parser": "^1.4.7",
         "@types/cors": "^2.8.17",

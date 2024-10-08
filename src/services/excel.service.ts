@@ -120,14 +120,17 @@ export const updateRowInSheet = async (
             res.status(400).send('Invalid row index.');
             return;
         }
-        const cookieDeviceRowId = sheet.rows[rowIndex].get('deviceId');
+        // const cookieDeviceRowId = sheet.rows[rowIndex].get('deviceId');
 
-        if (cookieDeviceRowId != deviceId) {
-            res.status(400).send(
-                'Bạn không có quyền sửa hàng này. Hàng này do một người khác tạo',
-            );
-            return;
-        }
+        // if(cookieDeviceRowId) {
+        //     if (cookieDeviceRowId != deviceId) {
+        //         res.status(400).send(
+        //             'Bạn không có quyền sửa hàng này. Hàng này do một người khác tạo',
+        //         );
+        //         return;
+        //     }
+        // }
+       
 
         const newRow = {
             ...updatedRow,
