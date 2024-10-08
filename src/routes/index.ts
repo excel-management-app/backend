@@ -7,6 +7,6 @@ export const appRouter = Router();
 
 appRouter.use('/files', fileRoute);
 
-appRouter.use('/word', wordRoute);
+appRouter.use('/words', wordRoute);
 
-appRouter.use('/device', deviceRoute);
+appRouter.use('/devices', deviceRoute);

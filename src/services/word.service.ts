@@ -1,15 +1,11 @@
-import { Request, Response } from 'express';
-import {} from 'lodash';
-import ExcelFile from '../models/excelFile';
 import Docxtemplater from 'docxtemplater';
-import PizZip from 'pizzip';
+import { Request, Response } from 'express';
 import fs from 'fs';
+import {} from 'lodash';
 import path from 'path';
-import { formatDate } from './functions/formatDate';
-import { LocalStorage } from 'node-localstorage';
-
-// Create a new LocalStorage instance
-const localStorage = new LocalStorage('./scratch');
+import PizZip from 'pizzip';
+import ExcelFile from '../models/excelFile';
+import { OUTPUT_FILE_PATH } from './functions/exportExcelDataFromDB';
 
 // In dữ liệu từ 1 row ra word
 export const exportDataToword = async (
@@ -18,7 +14,6 @@ export const exportDataToword = async (
 ): Promise<void> => {
     const { fileId, sheetName, rowIndex: rowIndexString } = req.params;
     const rowIndex = parseInt(rowIndexString);
-    const cookieDevice = req.cookies.deviceCookie;
 
     const file = await ExcelFile.findById(fileId);
     if (!file) {
@@ -57,39 +52,12 @@ export const exportDataToword = async (
     }
 
     const buf = doc.getZip().generate({ type: 'nodebuffer' });
-    fs.writeFileSync(path.resolve(__dirname, '../uploads/output.docx'), buf);
-
-    // get data localstorage
-    var statistic = localStorage.getItem('statistic');
-    let today = new Date();
-    var keyDate = formatDate(today); // lấy ra ngày hôm nay định dạng dd/mm/yyyy
-    if (!statistic) {
-        let obj: { [key: string]: { [key: string]: number } } = {}; // khai báo định dạng obj
-
-        var keyDevice = cookieDevice; // nếu file trống lần đầu thì thêm data ban đầu
-        obj[keyDate] = {
-            [keyDevice]: 1,
-        };
-        statistic = JSON.stringify(obj);
-    } else {
-        var dataObj = JSON.parse(statistic); //parse data ra object
-        if (keyDate in dataObj) {
-            // kiểm tra đã có dữ liệu ngày hôm nay chưa
-            var dataDate = dataObj[keyDate];
-            if (cookieDevice in dataDate) {
-                // kiểm tra ngày hôm nay thiết bị đã xuất file nào chưa
-                var count = (dataDate[cookieDevice] += 1);
-            } else {
-                dataDate[cookieDevice] = 1;
-            }
-        } else {
-            dataObj[keyDate] = {
-                [cookieDevice]: 1,
-            };
+    fs.writeFileSync(`${OUTPUT_FILE_PATH}/output.docx`, buf);
+    const filePath = `${OUTPUT_FILE_PATH}/output.docx`;
+    res.download(filePath, 'output.docx', (err) => {
+        if (err) {
+            console.error(err);
+            res.status(500).send('Error downloading the file.');
         }
-        statistic = JSON.stringify(dataObj);
-    }
-    localStorage.setItem('statistic', statistic); // lưu lại dữ liệu
-
-    res.status(200).json({ message: 'Generate data to word successfully' });
+    });
 };

@@ -21,6 +21,7 @@ export const insertExcelDataToDB = async (filePath: string): Promise<void> => {
             const jsonData: string[][] = xlsx.utils.sheet_to_json(worksheet, {
                 header: 1,
                 defval: '',
+                blankrows: false,
             });
 
             if (jsonData.length === 0) {
@@ -31,7 +32,11 @@ export const insertExcelDataToDB = async (filePath: string): Promise<void> => {
             const headers = compact(jsonData[0]);
 
             // Tạo dữ liệu cho các hàng, bắt đầu từ hàng thứ 2
-            const rows = jsonData.slice(1).map((row) => {
+            const filteredRows = jsonData
+                .slice(1)
+                .filter((row) => Object.values(row).some((v) => v !== ''));
+
+            const rows = filteredRows.map((row) => {
                 const rowObject: any = {};
 
                 // Lặp qua từng cell của hàng và khớp với tiêu đề tương ứng

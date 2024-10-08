@@ -6,7 +6,7 @@ import {
     OUTPUT_FILE_PATH,
 } from './functions/exportExcelDataFromDB';
 import { countRowsByDevice } from './functions/countRowsByDevice';
-import { getDeviceIdFromCookies } from './functions/getDeviceIdFromCookies';
+import { getDeviceIdFromHeader } from './functions/getDeviceIdFromHeader';
 
 export const uploadExcelFile = async (
     req: Request,
@@ -37,7 +37,7 @@ export const addRowToSheet = async (
 ): Promise<void> => {
     const { fileId, sheetName } = req.params;
     const newRowData = req.body.data;
-    const deviceId = getDeviceIdFromCookies(req);
+    const deviceId = getDeviceIdFromHeader(req);
 
     try {
         const file = await ExcelFile.findById(fileId);
@@ -51,15 +51,25 @@ export const addRowToSheet = async (
             res.status(404).send('Sheet not found.');
             return;
         }
+
         const query = {
             _id: fileId,
             'sheets.sheetName': sheetName,
             'sheets.rows': {
                 $elemMatch: {
-                    $and: [
-                        ...Object.entries(newRowData).map(([key, value]) => ({
-                            [key]: value,
-                        })),
+                    $or: [
+                        {
+                            $and: [
+                                ...Object.entries(newRowData).map(
+                                    ([key, value]) => ({
+                                        [key]: value,
+                                    }),
+                                ),
+                            ],
+                        },
+                        {
+                            tamY: newRowData.tamY,
+                        },
                     ],
                 },
             },
@@ -69,7 +79,7 @@ export const addRowToSheet = async (
         const isRowExists = await ExcelFile.exists(query);
 
         if (isRowExists) {
-            res.status(409).send('Dữ liệu đã được thêm vào');
+            res.status(409).send('Hàng đã tồn tại trong sheet');
             return;
         }
         sheet.rows.push({
@@ -79,7 +89,7 @@ export const addRowToSheet = async (
 
         await file.save();
 
-        res.status(200);
+        res.status(200).send('Row added successfully');
     } catch (error: any) {
         res.status(500).send('Error adding row: ' + error.message);
     }
@@ -93,7 +103,7 @@ export const updateRowInSheet = async (
     const { fileId, sheetName, rowIndex: rowIndexString } = req.params;
     const updatedRow = req.body.data;
     const rowIndex = parseInt(rowIndexString);
-    const deviceId = getDeviceIdFromCookies(req);
+    const deviceId = getDeviceIdFromHeader(req);
 
     try {
         const file = await ExcelFile.findById(fileId);
@@ -117,7 +127,9 @@ export const updateRowInSheet = async (
         const cookieDeviceRowId = sheet.rows[rowIndex].get('deviceId');
 
         if (cookieDeviceRowId != deviceId) {
-            res.status(400).send('Permission denied');
+            res.status(400).send(
+                'Bạn không có quyền sửa hàng này. Hàng này do một người khác tạo',
+            );
             return;
         }
 
@@ -235,7 +247,7 @@ export const exportFile = async (
 };
 
 export const countRowsByDeviceId = async (req: Request, res: Response) => {
-    const deviceId = getDeviceIdFromCookies(req);
+    const deviceId = getDeviceIdFromHeader(req);
     const fileId = req.params.fileId;
     const sheetName = req.params.sheetName;
     if (!deviceId) {
