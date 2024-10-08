@@ -35,3 +35,13 @@ export const createDevice = async (req: Request, res: Response) => {
     await device.save();
     res.status(200).json({ data: device });
 };
+
+export const getAllDevice = async (req: Request, res: Response) => {
+    const deviceId = getDeviceIdFromHeader(req);
+    if (!deviceId) {
+        res.status(401).send('Unauthorized');
+        return;
+    }
+    const devices = await Device.find();
+    res.status(200).json({ data: devices });
+};
