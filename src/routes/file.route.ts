@@ -8,6 +8,7 @@ import {
     getFileData,
     getFiles,
     exportFile,
+    exportWord,
     countRowsByDeviceId,
 } from '../services/excel.service';
 
@@ -35,6 +36,7 @@ fileRoute.delete(
 );
 
 fileRoute.get('/:fileId/export', exportFile);
+fileRoute.get('/:fileId/downloadWord', exportWord);
 fileRoute.get('/:fileId', getFileData);
 
 //count rows by device

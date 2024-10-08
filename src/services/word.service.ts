@@ -6,7 +6,9 @@ import path from 'path';
 import PizZip from 'pizzip';
 import archiver from 'archiver';
 import ExcelFile from '../models/excelFile';
+import { getDeviceIdFromHeader } from './functions/getDeviceIdFromHeader';
 import { OUTPUT_FILE_PATH } from './functions/exportExcelDataFromDB';
+import Device from '../models/device';
 
 // In dữ liệu từ 1 row ra word
 export const exportDataToword = async (
@@ -14,7 +16,7 @@ export const exportDataToword = async (
     res: Response,
 ): Promise<void> => {
     const { fileId, sheetName } = req.params;
-    const rowIndex = req.body;
+    const rowIndex = req.body.data;
     console.log("rowIndex====")
     console.log(rowIndex)
     // const rowIndex = parseInt(rowIndexString);
@@ -45,68 +47,70 @@ export const exportDataToword = async (
         path.resolve(__dirname, '../uploads/fileTest.docx'),
         'binary',
     );
+    var timestamp = new Date().getTime();
+    const zipFileName = `document-${fileId}.zip`;
+    const zipFilePath = `${OUTPUT_FILE_PATH}document-${fileId}.zip`;// Đường dẫn để lưu file zip
 
-    var lstData= rowIndex.split(",").map(Number)
-    let filePaths: string[] = [];
+    var lstData = rowIndex.split(",").map(Number);
 
-    // lstData.forEach((index: any) => {
-    //     console.log("index====",index);
-    //     const zip = new PizZip(content);
-    //     const doc = new Docxtemplater(zip);
-    //     const dataDB = sheet.rows[index];
-    //     const dataToWord = dataDB.toJSON();
-    //     doc.setData(dataToWord);
+    // Tạo stream để ghi dữ liệu vào file zip
+    const output = fs.createWriteStream(zipFilePath);
+    const archive = archiver('zip', { zlib: { level: 9 } });
+    let filesInZip: string[]= []
+    
+    output.on('close', async () => {
+        console.log(`Zip file created: ${zipFilePath}`);
+        // Sử dụng res.download để gửi file zip đến client sau khi file được tạo xong
+        console.log('Files in the zip:', filesInZip); // Log danh sách các file trong zip
 
-    //     try {
-    //         doc.render();
-    //     } catch (error: any) {
-    //         res.status(500).send('Error generate data to Word' + error.message);
-    //     }
+        // res.download(zipFilePath, zipFileName, (err) => {
+        //     if (err) {
+        //         console.error('Error downloading the zip file:', err);
+        //         res.status(500).send('Error downloading the zip file.');
+        //     } 
+            
+        // });
+        const deviceId = getDeviceIdFromHeader(req);
+        const device = await Device.findById(deviceId);
+        const updated = await Device.findByIdAndUpdate(deviceId, { count: device?.count+lstData.length} , {
+            new: true,
+        });
+        return res.status(200).send(zipFileName);
+    });
 
-    //     const buf = doc.getZip().generate({ type: 'nodebuffer' });
-    //     const filePath = `${OUTPUT_FILE_PATH}/output${index}.docx`;
-    //     fs.writeFileSync(filePath, buf);
+    archive.on('error', (err) => {
+        console.error('Error creating the zip file:', err);
+        res.status(500).send('Error creating the zip file.');
+    });
+
+    // Kết nối stream của archive với file zip
+    archive.pipe(output);
+
+    // Tạo các file .docx và thêm vào file zip
+    lstData.forEach((index: number) => {
+        console.log("index====", index);
+        const zip = new PizZip(content);
+        const doc = new Docxtemplater(zip);
+        const dataDB = sheet.rows[index];
+        const nameFile = dataDB.get("hoTen");
+        const dataToWord = dataDB.toJSON();
+        doc.setData(dataToWord);
+
+        try {
+            doc.render();
+        } catch (error: any) {
+            console.error('Error generating data to Word: ', error);
+            res.status(500).send('Error generating data to Word: ' + error.message);
+            return; // Dừng lại nếu có lỗi trong quá trình render
+        }
+
+        const buf = doc.getZip().generate({ type: 'nodebuffer' });
+        const fileName = `${nameFile}-${timestamp}.docx`;
+        filesInZip.push(fileName);
+        archive.append(buf, { name: fileName }); // Thêm file .docx vào file zip
         
-    //     filePaths.push(filePath);
-    //     // res.download(filePath, 'output.docx', (err) => {
-    //     //     if (err) {
-    //     //         console.error(err);
-    //     //         res.status(500).send('Error downloading the file.');
-    //     //     }
-    //     // });
-    // });
-    // const zipFileName = 'documents.zip';
-    // const zipFilePath = path.join(OUTPUT_FILE_PATH, zipFileName);
+    });
 
-    // // Tạo một file zip và gửi về phía client
-    // const output = fs.createWriteStream(zipFilePath);
-    // const archive = archiver('zip', { zlib: { level: 9 } });
-
-    // output.on('close', () => {
-    //     console.log(`Zip file created: ${zipFilePath}`);
-    //     res.download(zipFilePath, zipFileName, (err) => {
-    //         if (err) {
-    //             console.error(err);
-    //             res.status(500).send('Error downloading the file.');
-    //         }
-
-    //         // Xóa file zip sau khi tải xuống để tiết kiệm không gian lưu trữ
-    //         fs.unlinkSync(zipFilePath);
-    //     });
-    // });
-
-    // archive.on('error', (err) => {
-    //     console.error('Error creating the zip file:', err);
-    //     res.status(500).send('Error creating the zip file.');
-    // });
-
-    // archive.pipe(output);
-
-    // // Thêm các file docx vào archive
-    // filePaths.forEach(filePath => {
-    //     archive.file(filePath, { name: path.basename(filePath) });
-    // });
-
-    // // Kết thúc và nén file
-    // archive.finalize();
+    // Kết thúc và tạo file zip
+    archive.finalize();
 };

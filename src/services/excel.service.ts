@@ -246,6 +246,27 @@ export const exportFile = async (
     }
 };
 
+export const exportWord = async (
+    req: Request,
+    res: Response,
+): Promise<void> => {
+    const { fileId } = req.params;
+
+    try {
+        await exportExcelDataFromDB({ fileId });
+        const filePath = `${OUTPUT_FILE_PATH}document-${fileId}.zip`;
+        res.download(filePath, `document-${fileId}.zip`, (err) => {
+            if (err) {
+                console.error(err);
+                res.status(500).send('Error downloading the file.');
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error exporting file');
+    }
+};
+
 export const countRowsByDeviceId = async (req: Request, res: Response) => {
     const deviceId = getDeviceIdFromHeader(req);
     const fileId = req.params.fileId;
