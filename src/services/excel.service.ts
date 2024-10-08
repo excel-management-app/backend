@@ -40,6 +40,31 @@ export const addRowToSheet = async (
     const deviceId = getDeviceIdFromHeader(req);
 
     try {
+        const tamY = `${newRowData.soHieuToBanDo}_${newRowData.soThuTuThua}`;
+        const fileExistsWithSheetAndRow = await ExcelFile.exists({
+            _id: fileId,
+            'sheets.sheetName': sheetName,
+            'sheets.rows': {
+                $elemMatch: {
+                    $or: [
+                        {
+                            $and: Object.entries(newRowData).map(
+                                ([key, value]) => ({
+                                    [key]: value,
+                                }),
+                            ),
+                        },
+                        {
+                            tamY,
+                        },
+                    ],
+                },
+            },
+        });
+        if (fileExistsWithSheetAndRow) {
+            res.status(409).send('Hàng đã tồn tại trong sheet');
+            return;
+        }
         const file = await ExcelFile.findById(fileId);
         if (!file) {
             res.status(404).send('File not found.');
@@ -52,38 +77,9 @@ export const addRowToSheet = async (
             return;
         }
 
-        const query = {
-            _id: fileId,
-            'sheets.sheetName': sheetName,
-            'sheets.rows': {
-                $elemMatch: {
-                    $or: [
-                        {
-                            $and: [
-                                ...Object.entries(newRowData).map(
-                                    ([key, value]) => ({
-                                        [key]: value,
-                                    }),
-                                ),
-                            ],
-                        },
-                        {
-                            tamY: newRowData.tamY,
-                        },
-                    ],
-                },
-            },
-        };
-
-        // Check if such a row already exists
-        const isRowExists = await ExcelFile.exists(query);
-
-        if (isRowExists) {
-            res.status(409).send('Hàng đã tồn tại trong sheet');
-            return;
-        }
         sheet.rows.push({
             ...newRowData,
+            tamY,
             deviceId,
         });
 
@@ -135,6 +131,7 @@ export const updateRowInSheet = async (
 
         const newRow = {
             ...updatedRow,
+            tamY: `${updatedRow.soHieuToBanDo}_${updatedRow.soThuTuThua}`,
             deviceId,
         };
 

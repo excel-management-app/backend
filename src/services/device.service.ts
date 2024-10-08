@@ -18,6 +18,7 @@ export const updateDevice = async (req: Request, res: Response) => {
         res.status(401).send('Unauthorized');
         return;
     }
+
     const device = await Device.findByIdAndUpdate(deviceId, req.body.data, {
         new: true,
     });
