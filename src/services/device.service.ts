@@ -85,13 +85,12 @@ export const getAllDevice = async (req: Request, res: Response) => {
             },
         },
     ])
-    .then(result => {
-        console.log("----------");
-        res.status(200).json({ data: result });
-    })
-    .catch(error => {
-        console.error('Error in aggregation:', error);
-    });
+        .then((result) => {
+            console.log('----------');
+            res.status(200).json({ data: result });
+        })
+        .catch((error) => {
+            console.error('Error in aggregation:', error);
+        });
     // const devices = await Device.find();
-    
 };

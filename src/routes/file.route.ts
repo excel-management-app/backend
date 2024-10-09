@@ -13,16 +13,6 @@ import {
     countRowsByDeviceId,
 } from '../services/excel.service';
 
-function normalizeString(str: string) {
-    // Thay thế các ký tự UTF-8 có dấu thành không dấu
-    const normalizedStr = str
-      .normalize("NFD") // Tách các ký tự có dấu
-      .replace(/[\u0300-\u036f]/g, ""); // Loại bỏ các dấu
-  
-    // Loại bỏ khoảng trắng
-    return normalizedStr.replace(/\s+/g, "");
-  }
-
 const storage = multer.diskStorage({
     destination: function (_req, _file, cb) {
         cb(null, 'src/files/templates');

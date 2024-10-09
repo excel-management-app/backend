@@ -10,7 +10,7 @@ import { getDeviceIdFromHeader } from './functions/getDeviceIdFromHeader';
 import { OUTPUT_FILE_PATH } from './functions/exportExcelDataFromDB';
 import Device from '../models/device';
 import Statistic from '../models/statistic';
-import { LocalStorage } from "node-localstorage";
+import { LocalStorage } from 'node-localstorage';
 
 global.localStorage = new LocalStorage('./scratch');
 
@@ -21,8 +21,8 @@ export const exportDataToword = async (
 ): Promise<void> => {
     const { fileId, sheetName } = req.params;
     const rowIndex = req.body.data;
-    console.log("rowIndex====")
-    console.log(rowIndex)
+    console.log('rowIndex====');
+    console.log(rowIndex);
     // const rowIndex = parseInt(rowIndexString);
 
     const file = await ExcelFile.findById(fileId);
@@ -38,8 +38,8 @@ export const exportDataToword = async (
 
         return;
     }
-     
-    if(rowIndex.length < 1) {
+
+    if (rowIndex.length < 1) {
         res.status(400).send('No row selected.');
         return;
     }
@@ -48,23 +48,25 @@ export const exportDataToword = async (
         return;
     }
 
-    const pathFileTemplate = global.localStorage.getItem("templateWord") || "../uploads/fileTest.docx";
-    
-    const content = fs.readFileSync( 
+    const pathFileTemplate =
+        global.localStorage.getItem('templateWord') ||
+        '../uploads/fileTest.docx';
+
+    const content = fs.readFileSync(
         path.resolve(__dirname, `../../${pathFileTemplate}`),
         'binary',
     );
     var timestamp = new Date().getTime();
     const zipFileName = `document-${fileId}.zip`;
-    const zipFilePath = `${OUTPUT_FILE_PATH}document-${fileId}.zip`;// Đường dẫn để lưu file zip
+    const zipFilePath = `${OUTPUT_FILE_PATH}document-${fileId}.zip`; // Đường dẫn để lưu file zip
 
-    var lstData = rowIndex.split(",").map(Number);
+    var lstData = rowIndex.split(',').map(Number);
 
     // Tạo stream để ghi dữ liệu vào file zip
     const output = fs.createWriteStream(zipFilePath);
     const archive = archiver('zip', { zlib: { level: 9 } });
-    let filesInZip: string[]= []
-    
+    let filesInZip: string[] = [];
+
     output.on('close', async () => {
         console.log(`Zip file created: ${zipFilePath}`);
         // Sử dụng res.download để gửi file zip đến client sau khi file được tạo xong
@@ -74,25 +76,36 @@ export const exportDataToword = async (
         //     if (err) {
         //         console.error('Error downloading the zip file:', err);
         //         res.status(500).send('Error downloading the zip file.');
-        //     } 
-            
+        //     }
+
         // });
         const now = new Date();
 
         // Tạo thời gian bắt đầu của ngày hôm nay (00:00:00)
         const startOfDay = new Date(now.setHours(0, 0, 0, 0));
-    
+
         // Tạo thời gian kết thúc của ngày hôm nay (23:59:59.999)
         const endOfDay = new Date(now.setHours(23, 59, 59, 999));
 
         const deviceId = getDeviceIdFromHeader(req);
-        const statistic = await Statistic.find({deviceId: deviceId, createdAt: { $gte: startOfDay, $lte: endOfDay }});
-        if(statistic.length > 0) {
-            await Statistic.findByIdAndUpdate(statistic[0]._id, { count: statistic[0]?.count+lstData.length} , {
+        const statistic = await Statistic.find({
+            deviceId: deviceId,
+            createdAt: { $gte: startOfDay, $lte: endOfDay },
+        });
+        if (statistic.length > 0) {
+            await Statistic.findByIdAndUpdate(
+                statistic[0]._id,
+                { count: statistic[0]?.count + lstData.length },
+                {
                     new: true,
-                });
+                },
+            );
         } else {
-            await Statistic.create({deviceId: deviceId, count: lstData.length, createdAt: now})
+            await Statistic.create({
+                deviceId: deviceId,
+                count: lstData.length,
+                createdAt: now,
+            });
         }
         // const updated = await Device.findByIdAndUpdate(deviceId, { count: device?.count+lstData.length} , {
         //     new: true,
@@ -114,7 +127,7 @@ export const exportDataToword = async (
         const zip = new PizZip(content);
         const doc = new Docxtemplater(zip);
         const dataDB = sheet.rows[index];
-        const nameFile = dataDB.get("hoTen");
+        const nameFile = dataDB.get('hoTen');
         const dataToWord = dataDB.toJSON();
         doc.setData(dataToWord);
 
@@ -122,7 +135,9 @@ export const exportDataToword = async (
             doc.render();
         } catch (error: any) {
             console.error('Error generating data to Word: ', error);
-            res.status(500).send('Error generating data to Word: ' + error.message);
+            res.status(500).send(
+                'Error generating data to Word: ' + error.message,
+            );
             return; // Dừng lại nếu có lỗi trong quá trình render
         }
 
@@ -130,7 +145,6 @@ export const exportDataToword = async (
         const fileName = `${nameFile}-${timestamp}.docx`;
         filesInZip.push(fileName);
         archive.append(buf, { name: fileName }); // Thêm file .docx vào file zip
-        
     });
 
     // Kết thúc và tạo file zip
