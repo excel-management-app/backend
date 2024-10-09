@@ -10,6 +10,9 @@ import { getDeviceIdFromHeader } from './functions/getDeviceIdFromHeader';
 import { OUTPUT_FILE_PATH } from './functions/exportExcelDataFromDB';
 import Device from '../models/device';
 import Statistic from '../models/statistic';
+import { LocalStorage } from "node-localstorage";
+
+global.localStorage = new LocalStorage('./scratch');
 
 // In dữ liệu từ 1 row ra word
 export const exportDataToword = async (
@@ -44,8 +47,11 @@ export const exportDataToword = async (
         res.status(400).send('Invalid row index.');
         return;
     }
-    const content = fs.readFileSync(
-        path.resolve(__dirname, '../uploads/fileTest.docx'),
+
+    const pathFileTemplate = global.localStorage.getItem("templateWord") || "../uploads/fileTest.docx";
+    
+    const content = fs.readFileSync( 
+        path.resolve(__dirname, `../../${pathFileTemplate}`),
         'binary',
     );
     var timestamp = new Date().getTime();
@@ -86,7 +92,7 @@ export const exportDataToword = async (
                     new: true,
                 });
         } else {
-            await Statistic.create({deviceId: deviceId, count: lstData.length})
+            await Statistic.create({deviceId: deviceId, count: lstData.length, createdAt: now})
         }
         // const updated = await Device.findByIdAndUpdate(deviceId, { count: device?.count+lstData.length} , {
         //     new: true,

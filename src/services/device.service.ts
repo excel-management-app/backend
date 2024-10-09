@@ -51,6 +51,7 @@ export const getAllDevice = async (req: Request, res: Response) => {
         return;
     }
     const date = req.params.date;
+    // console.log("date====",date)
     const startOfDay = new Date(date);
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);

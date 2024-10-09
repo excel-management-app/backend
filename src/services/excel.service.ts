@@ -7,6 +7,10 @@ import {
 } from './functions/exportExcelDataFromDB';
 import { countRowsByDevice } from './functions/countRowsByDevice';
 import { getDeviceIdFromHeader } from './functions/getDeviceIdFromHeader';
+import { LocalStorage } from "node-localstorage";
+
+global.localStorage = new LocalStorage('./scratch');
+
 
 export const uploadExcelFile = async (
     req: Request,
@@ -24,6 +28,29 @@ export const uploadExcelFile = async (
         await insertExcelDataToDB(filePath);
 
         res.status(200).send('File successfully processed and data inserted.');
+    } catch (error) {
+        console.error('Error processing the file:', error);
+        res.status(500).send('Failed to process the file.');
+    }
+};
+
+
+export const uploadWordFile = async (
+    req: Request,
+    res: Response,
+): Promise<void> => {
+    try {
+        if (!req.file) {
+            res.status(400).send('No file uploaded.');
+            return;
+        }
+
+        const filePath = req.file.path;
+
+        console.log("filePath===",filePath)
+        global.localStorage.setItem('templateWord', filePath);
+        // Insert the Excel file into the database
+        res.status(200).send({message: 'File successfully processed and data inserted.', filePath: filePath});
     } catch (error) {
         console.error('Error processing the file:', error);
         res.status(500).send('Failed to process the file.');
@@ -242,7 +269,6 @@ export const exportWord = async (
     const { fileId } = req.params;
 
     try {
-        await exportExcelDataFromDB({ fileId });
         const filePath = `${OUTPUT_FILE_PATH}document-${fileId}.zip`;
         res.download(filePath, `document-${fileId}.zip`, (err) => {
             if (err) {
