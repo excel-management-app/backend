@@ -12,6 +12,6 @@ deviceRoute.post('/', createDevice);
 
 deviceRoute.get('/', getDevice);
 
-deviceRoute.get('/getAll', getAllDevice);
+deviceRoute.get('/getAll/:date', getAllDevice);
 
 deviceRoute.put('/', updateDevice);

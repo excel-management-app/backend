@@ -9,6 +9,7 @@ import ExcelFile from '../models/excelFile';
 import { getDeviceIdFromHeader } from './functions/getDeviceIdFromHeader';
 import { OUTPUT_FILE_PATH } from './functions/exportExcelDataFromDB';
 import Device from '../models/device';
+import Statistic from '../models/statistic';
 
 // In dữ liệu từ 1 row ra word
 export const exportDataToword = async (
@@ -70,11 +71,26 @@ export const exportDataToword = async (
         //     } 
             
         // });
+        const now = new Date();
+
+        // Tạo thời gian bắt đầu của ngày hôm nay (00:00:00)
+        const startOfDay = new Date(now.setHours(0, 0, 0, 0));
+    
+        // Tạo thời gian kết thúc của ngày hôm nay (23:59:59.999)
+        const endOfDay = new Date(now.setHours(23, 59, 59, 999));
+
         const deviceId = getDeviceIdFromHeader(req);
-        const device = await Device.findById(deviceId);
-        const updated = await Device.findByIdAndUpdate(deviceId, { count: device?.count+lstData.length} , {
-            new: true,
-        });
+        const statistic = await Statistic.find({deviceId: deviceId, createdAt: { $gte: startOfDay, $lte: endOfDay }});
+        if(statistic.length > 0) {
+            await Statistic.findByIdAndUpdate(statistic[0]._id, { count: statistic[0]?.count+lstData.length} , {
+                    new: true,
+                });
+        } else {
+            await Statistic.create({deviceId: deviceId, count: lstData.length})
+        }
+        // const updated = await Device.findByIdAndUpdate(deviceId, { count: device?.count+lstData.length} , {
+        //     new: true,
+        // });
         return res.status(200).send(zipFileName);
     });
 
@@ -88,7 +104,7 @@ export const exportDataToword = async (
 
     // Tạo các file .docx và thêm vào file zip
     lstData.forEach((index: number) => {
-        console.log("index====", index);
+        // console.log("index====", index);
         const zip = new PizZip(content);
         const doc = new Docxtemplater(zip);
         const dataDB = sheet.rows[index];
