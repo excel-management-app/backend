@@ -27,11 +27,7 @@ app.use(compression());
 app.use(helmet());
 
 // Apply CORS middleware
-app.use(
-    cors({
-        origin: '*',
-    }),
-);
+app.use(cors());
 
 // routes
 app.use(appRouter);

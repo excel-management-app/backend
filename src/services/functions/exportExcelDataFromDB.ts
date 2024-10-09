@@ -19,14 +19,20 @@ export async function exportExcelDataFromDB({ fileId }: { fileId: string }) {
         await workbook.xlsx.readFile(EXPORT_TEMPLATE_PATH);
 
         // File Nhap Tong
-        const sheetName: string = String(fileData.sheets[1].sheetName);
+        const sheetToExport = fileData.sheets.find(
+            (sheet) => sheet.sheetName === 'File nhap tong',
+        );
+        if (!sheetToExport) {
+            throw new Error('Sheet not found in the template.');
+        }
+        const sheetName: string = sheetToExport.sheetName as string;
         const worksheet = workbook.getWorksheet(sheetName);
 
         if (!worksheet) {
             throw new Error(`Sheet ${sheetName} not found in the template.`);
         }
 
-        const rows: RowData[] = fileData.sheets[1].rows as unknown as RowData[];
+        const rows: RowData[] = sheetToExport.rows as unknown as RowData[];
 
         const headerRow = worksheet.getRow(1); // Assuming header is in the first row
         const startRow = worksheet.actualRowCount + 1; // Start after the last row of the template
@@ -52,6 +58,12 @@ export async function exportExcelDataFromDB({ fileId }: { fileId: string }) {
                 if (templateCell && templateCell.style) {
                     cell.style = templateCell.style; // Copy the style from the template cell
                 }
+                cell.border = {
+                    top: { style: 'thin' },
+                    left: { style: 'thin' },
+                    bottom: { style: 'thin' },
+                    right: { style: 'thin' },
+                };
             });
         });
 

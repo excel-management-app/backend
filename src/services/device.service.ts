@@ -9,6 +9,12 @@ export const getDevice = async (req: Request, res: Response) => {
         return;
     }
     const device = await Device.findById(deviceId);
+
+    if (!device) {
+        res.status(404).send('Device not found');
+        return;
+    }
+
     res.status(200).json({ data: device });
 };
 
