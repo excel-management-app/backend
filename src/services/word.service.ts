@@ -56,17 +56,18 @@ export const exportDataToword = async (
         path.resolve(__dirname, `../../${pathFileTemplate}`),
         'binary',
     );
-    var timestamp = new Date().getTime();
+    const timestamp = new Date().getTime();
     const zipFileName = `document-${fileId}.zip`;
     const zipFilePath = `${OUTPUT_FILE_PATH}document-${fileId}.zip`; // Đường dẫn để lưu file zip
 
-    var lstData = rowIndex.split(',').map(Number);
+    const lstData = rowIndex.split(',').map(Number);
 
     // Tạo stream để ghi dữ liệu vào file zip
     const output = fs.createWriteStream(zipFilePath);
     const archive = archiver('zip', { zlib: { level: 9 } });
-    let filesInZip: string[] = [];
+    const filesInZip: string[] = [];
 
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     output.on('close', async () => {
         console.log(`Zip file created: ${zipFilePath}`);
         // Sử dụng res.download để gửi file zip đến client sau khi file được tạo xong
