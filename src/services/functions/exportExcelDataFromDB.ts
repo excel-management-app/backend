@@ -58,6 +58,12 @@ export async function exportExcelDataFromDB({ fileId }: { fileId: string }) {
                 if (templateCell && templateCell.style) {
                     cell.style = templateCell.style; // Copy the style from the template cell
                 }
+                cell.border = {
+                    top: { style: 'thin' },
+                    left: { style: 'thin' },
+                    bottom: { style: 'thin' },
+                    right: { style: 'thin' },
+                };
             });
         });
 
