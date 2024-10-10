@@ -44,15 +44,26 @@ export const exportDataToword = async (
             res.status(400).send('Invalid row index.');
             return;
         }
-
-        const pathFileTemplate =
-            global.localStorage.getItem('templateWord') ||
-            '../uploads/fileTest.docx';
-
-        const content = fs.readFileSync(
-            path.resolve(__dirname, `../../${pathFileTemplate}`),
-            'binary',
-        );
+        var pathFileTemplate = "";
+        var content: PizZip.LoadData;
+        try {
+            pathFileTemplate = global.localStorage.getItem('templateWord') || ""
+            if (pathFileTemplate == null || pathFileTemplate == undefined || pathFileTemplate.trim() == "") {
+                res.status(404).send('Bạn chưa upload file template word.');
+                return;
+            }
+    
+            content = fs.readFileSync(
+                path.resolve(__dirname, `../../${pathFileTemplate}`),
+                'binary',
+            );
+        }
+        catch(error: any) {
+            res.status(404).send('Bạn chưa upload file template word.');
+            return;
+        }
+        
+       
         const timestamp = new Date().getTime();
         const zipFileName = `document-${fileId}.zip`;
         const zipFilePath = `${OUTPUT_FILE_PATH}document-${fileId}.zip`; // Đường dẫn để lưu file zip
