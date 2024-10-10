@@ -123,7 +123,12 @@ export const exportDataToword = async (
         lstData.forEach((index: number) => {
             // console.log("index====", index);
             const zip = new PizZip(content);
-            const doc = new Docxtemplater(zip);
+            const doc = new Docxtemplater(zip, {
+                nullGetter: (part) => {
+                  console.warn(`Không tìm thấy dữ liệu cho placeholder: ${part.value}`);
+                  return ""; // Trả về chuỗi rỗng nếu không tìm thấy dữ liệu
+                },
+              });
             const dataDB = sheet.rows[index];
             const nameFile = dataDB.get('hoTen');
             const dataToWord = dataDB.toJSON();
