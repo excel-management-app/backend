@@ -308,6 +308,8 @@ export const searchRowInSheet = async (
 ): Promise<void> => {
     const { fileId, sheetName, soHieuToBanDo, soThuTuThua } = req.params;
 
+    const old = req.query.old === 'true';
+
     try {
         const file = await ExcelFile.findOne({
             _id: fileId,
@@ -326,9 +328,19 @@ export const searchRowInSheet = async (
         }
 
         const matchingRow = JSON.parse(JSON.stringify(sheet.rows)).find(
-            (row: any) =>
-                String(row.soHieuToBanDo) === soHieuToBanDo &&
-                String(row.soThuTuThua) === soThuTuThua,
+            (row: any) => {
+                if (old) {
+                    return (
+                        String(row.soToCu) === soHieuToBanDo &&
+                        String(row.soThuaCu) === soThuTuThua
+                    );
+                } else {
+                    return (
+                        String(row.soHieuToBanDo) === soHieuToBanDo &&
+                        String(row.soThuTuThua) === soThuTuThua
+                    );
+                }
+            },
         );
         if (!matchingRow) {
             res.status(404).send('Row not found.');
