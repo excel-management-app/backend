@@ -11,7 +11,6 @@ import {
     exportWord,
     uploadWordFile,
     countRowsByDeviceId,
-    searchRowInSheet,
 } from '../services/excel.service';
 
 const storage = multer.diskStorage({
@@ -30,11 +29,6 @@ export const fileRoute = express.Router();
 fileRoute.post('/upload', upload.single('file'), uploadExcelFile);
 
 fileRoute.post('/uploadTemplateWord', upload.single('file'), uploadWordFile);
-
-fileRoute.get(
-    '/:fileId/sheets/:sheetName/soHieuToBanDo/:soHieuToBanDo/soThuTuThua/:soThuTuThua',
-    searchRowInSheet,
-);
 
 fileRoute.put('/:fileId/sheets/:sheetName/rows/:rowIndex', updateRowInSheet);
 fileRoute.post('/:fileId/sheets/:sheetName/rows', addRowToSheet);
