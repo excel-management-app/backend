@@ -1,13 +1,13 @@
 import { Request, Response } from 'express';
+import { LocalStorage } from 'node-localstorage';
 import ExcelFile from '../models/excelFile';
-import { insertExcelDataToDB } from './functions/insertExcelDataToDB';
+import { countRowsByDevice } from './functions/countRowsByDevice';
 import {
     exportExcelDataFromDB,
     OUTPUT_FILE_PATH,
 } from './functions/exportExcelDataFromDB';
-import { countRowsByDevice } from './functions/countRowsByDevice';
 import { getDeviceIdFromHeader } from './functions/getDeviceIdFromHeader';
-import { LocalStorage } from 'node-localstorage';
+import { insertExcelDataToDB } from './functions/insertExcelDataToDB';
 
 global.localStorage = new LocalStorage('./scratch');
 
@@ -300,4 +300,55 @@ export const countRowsByDeviceId = async (req: Request, res: Response) => {
     res.status(200).json({
         data: result,
     });
+};
+
+export const searchRowInSheet = async (
+    req: Request,
+    res: Response,
+): Promise<void> => {
+    const { fileId, sheetName, soHieuToBanDo, soThuTuThua } = req.params;
+
+    const old = req.query.old === 'true';
+
+    try {
+        const file = await ExcelFile.findOne({
+            _id: fileId,
+            'sheets.sheetName': sheetName,
+        });
+
+        if (!file) {
+            res.status(404).send('File, sheet, or row not found.');
+            return;
+        }
+
+        const sheet = file.sheets.find((s) => s.sheetName === sheetName);
+        if (!sheet) {
+            res.status(404).send('Sheet not found.');
+            return;
+        }
+
+        const matchingRow = JSON.parse(JSON.stringify(sheet.rows)).find(
+            (row: any) => {
+                if (old) {
+                    return (
+                        String(row.soToCu) === soHieuToBanDo &&
+                        String(row.soThuaCu) === soThuTuThua
+                    );
+                } else {
+                    return (
+                        String(row.soHieuToBanDo) === soHieuToBanDo &&
+                        String(row.soThuTuThua) === soThuTuThua
+                    );
+                }
+            },
+        );
+        if (!matchingRow) {
+            res.status(404).send('Row not found.');
+            return;
+        }
+
+        res.status(200).json({ data: matchingRow });
+    } catch (error: any) {
+        res.status(500).send('Error searching row: ' + error.message);
+    }
 };
