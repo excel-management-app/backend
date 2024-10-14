@@ -18,9 +18,5 @@ yarn.lock
 note.txt
 .vercel
 
-# files
-src/uploads/
-
-src/files/
 
 scratch/
