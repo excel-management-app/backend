@@ -6,7 +6,11 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import MongoDB from './db/index';
 import { appRouter } from './routes/index';
-
+import Account from './models/account';
+import bcrypt from 'bcrypt';
+import { deleteFilesFromExportDir } from './crons/deleteFilesFromExportDir';
+import cron from 'node-cron';
+import path from 'path';
 // load .env
 dotenv.config();
 
@@ -39,9 +43,35 @@ app.use(appRouter);
 const PORT = parseInt(process.env.PORT || '') || 3001;
 
 // MongoDB connection
+const initAdminAccount = async () => {
+    try {
+        const adminExists = await Account.findOne({ name: 'admin' });
+        if (!adminExists) {
+            const hashedPassword = await bcrypt.hash('admin123', 10);
+            const newAdmin = new Account({
+                name: 'admin',
+                password: hashedPassword,
+                role: 'admin',
+            });
+            await newAdmin.save();
+            console.log('Admin account created');
+        } else {
+            console.log('Admin account already exists');
+        }
+    } catch (error) {
+        console.error('Error creating admin account:', error);
+    }
+};
 async function connectToMongoDB() {
     await MongoDB.getInstance().connect();
+    await initAdminAccount();
 }
+// Schedule a cron job to run every 5 minutes
+const EXPORT_DIR = path.join(__dirname, 'files/exports');
+cron.schedule('*/5 * * * *', () => {
+    console.log('Running file deletion task...');
+    deleteFilesFromExportDir(EXPORT_DIR);
+});
 
 app.listen(PORT, () => {
     connectToMongoDB().catch((err) =>

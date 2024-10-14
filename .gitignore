@@ -2,10 +2,6 @@
 
 # dependencies
 node_modules/
-
-
-
-
 # production
 dist/
 
@@ -27,4 +23,4 @@ src/uploads/
 
 src/files/
 
-/scratch
+scratch/

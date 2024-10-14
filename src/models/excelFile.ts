@@ -8,9 +8,9 @@ const sheetSchema = new mongoose.Schema({
             type: Map,
             of: new mongoose.Schema({
                 value: String,
-                deviceId: {
+                accountId: {
                     type: mongoose.Schema.Types.ObjectId,
-                    ref: 'Device',
+                    ref: 'Account',
                 },
             }),
         },

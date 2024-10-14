@@ -10,8 +10,8 @@ import {
     exportFile,
     exportWord,
     uploadWordFile,
-    countRowsByDeviceId,
 } from '../services/excel.service';
+import { checkAdminMiddleware } from '../middlewares/isAdmin';
 
 const storage = multer.diskStorage({
     destination: function (_req, _file, cb) {
@@ -28,7 +28,12 @@ export const fileRoute = express.Router();
 
 fileRoute.post('/upload', upload.single('file'), uploadExcelFile);
 
-fileRoute.post('/uploadTemplateWord', upload.single('file'), uploadWordFile);
+fileRoute.post(
+    '/uploadTemplateWord',
+    checkAdminMiddleware,
+    upload.single('file'),
+    uploadWordFile,
+);
 
 fileRoute.put('/:fileId/sheets/:sheetName/rows/:rowIndex', updateRowInSheet);
 fileRoute.post('/:fileId/sheets/:sheetName/rows', addRowToSheet);
@@ -41,8 +46,5 @@ fileRoute.delete(
 fileRoute.get('/:fileId/export', exportFile);
 fileRoute.get('/:fileId/downloadWord', exportWord);
 fileRoute.get('/:fileId', getFileData);
-
-//count rows by device
-fileRoute.get('/:fileId/sheets/:sheetName/count', countRowsByDeviceId);
 
 fileRoute.get('/', getFiles);
