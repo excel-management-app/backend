@@ -10,7 +10,6 @@ import {
     exportFile,
     exportWord,
     uploadWordFile,
-    countRowsByDeviceId,
 } from '../services/excel.service';
 
 const storage = multer.diskStorage({
@@ -41,8 +40,5 @@ fileRoute.delete(
 fileRoute.get('/:fileId/export', exportFile);
 fileRoute.get('/:fileId/downloadWord', exportWord);
 fileRoute.get('/:fileId', getFileData);
-
-//count rows by device
-fileRoute.get('/:fileId/sheets/:sheetName/count', countRowsByDeviceId);
 
 fileRoute.get('/', getFiles);

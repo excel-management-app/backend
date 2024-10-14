@@ -9,7 +9,7 @@ import PizZip from 'pizzip';
 import ExcelFile from '../models/excelFile';
 import Statistic from '../models/statistic';
 import { OUTPUT_FILE_PATH } from './functions/exportExcelDataFromDB';
-import { getDeviceIdFromHeader } from './functions/getDeviceIdFromHeader';
+import { getAccountIdFromHeader } from './functions/getAccountIdFromHeader';
 
 global.localStorage = new LocalStorage('./scratch');
 
@@ -44,26 +44,29 @@ export const exportDataToword = async (
             res.status(400).send('Invalid row index.');
             return;
         }
-        var pathFileTemplate = "";
-        var content: PizZip.LoadData;
+        let pathFileTemplate = '';
+        let content: PizZip.LoadData;
         try {
-            pathFileTemplate = global.localStorage.getItem('templateWord') || ""
-            if (pathFileTemplate == null || pathFileTemplate == undefined || pathFileTemplate.trim() == "") {
+            pathFileTemplate =
+                global.localStorage.getItem('templateWord') || '';
+            if (
+                pathFileTemplate == null ||
+                pathFileTemplate == undefined ||
+                pathFileTemplate.trim() == ''
+            ) {
                 res.status(404).send('Bạn chưa upload file template word.');
                 return;
             }
-    
+
             content = fs.readFileSync(
                 path.resolve(__dirname, `../../${pathFileTemplate}`),
                 'binary',
             );
-        }
-        catch(error: any) {
+        } catch (error: any) {
             res.status(404).send('Bạn chưa upload file template word.');
             return;
         }
-        
-       
+
         const timestamp = new Date().getTime();
         const zipFileName = `document-${fileId}.zip`;
         const zipFilePath = `${OUTPUT_FILE_PATH}document-${fileId}.zip`; // Đường dẫn để lưu file zip
@@ -85,9 +88,9 @@ export const exportDataToword = async (
             // Tạo thời gian kết thúc của ngày hôm nay (23:59:59.999)
             const endOfDay = new Date(now.setHours(23, 59, 59, 999));
 
-            const deviceId = getDeviceIdFromHeader(req);
+            const accountId = getAccountIdFromHeader(req);
             const statistic = await Statistic.find({
-                deviceId: deviceId,
+                accountId,
                 createdAt: { $gte: startOfDay, $lte: endOfDay },
             });
             if (statistic.length > 0) {
@@ -100,14 +103,12 @@ export const exportDataToword = async (
                 );
             } else {
                 await Statistic.create({
-                    deviceId: deviceId,
+                    accountId,
                     count: lstData.length,
                     createdAt: now,
                 });
             }
-            // const updated = await Device.findByIdAndUpdate(deviceId, { count: device?.count+lstData.length} , {
-            //     new: true,
-            // });
+
             return res.status(200).send(zipFileName);
         });
 
@@ -125,10 +126,12 @@ export const exportDataToword = async (
             const zip = new PizZip(content);
             const doc = new Docxtemplater(zip, {
                 nullGetter: (part) => {
-                  console.warn(`Không tìm thấy dữ liệu cho placeholder: ${part.value}`);
-                  return ""; // Trả về chuỗi rỗng nếu không tìm thấy dữ liệu
+                    console.warn(
+                        `Không tìm thấy dữ liệu cho placeholder: ${part.value}`,
+                    );
+                    return ''; // Trả về chuỗi rỗng nếu không tìm thấy dữ liệu
                 },
-              });
+            });
             const dataDB = sheet.rows[index];
             const nameFile = dataDB.get('hoTen');
             const dataToWord = dataDB.toJSON();

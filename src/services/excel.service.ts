@@ -1,12 +1,11 @@
 import { Request, Response } from 'express';
 import { LocalStorage } from 'node-localstorage';
 import ExcelFile from '../models/excelFile';
-import { countRowsByDevice } from './functions/countRowsByDevice';
 import {
     exportExcelDataFromDB,
     OUTPUT_FILE_PATH,
 } from './functions/exportExcelDataFromDB';
-import { getDeviceIdFromHeader } from './functions/getDeviceIdFromHeader';
+import { getAccountIdFromHeader } from './functions/getAccountIdFromHeader';
 import { insertExcelDataToDB } from './functions/insertExcelDataToDB';
 
 global.localStorage = new LocalStorage('./scratch');
@@ -61,7 +60,7 @@ export const addRowToSheet = async (
 ): Promise<void> => {
     const { fileId, sheetName } = req.params;
     const newRowData = req.body.data;
-    const deviceId = getDeviceIdFromHeader(req);
+    const accountId = getAccountIdFromHeader(req);
 
     try {
         const tamY = `${newRowData.soHieuToBanDo}_${newRowData.soThuTuThua}`;
@@ -104,7 +103,7 @@ export const addRowToSheet = async (
         sheet.rows.push({
             ...newRowData,
             tamY,
-            deviceId,
+            accountId,
         });
 
         await file.save();
@@ -123,7 +122,7 @@ export const updateRowInSheet = async (
     const { fileId, sheetName, rowIndex: rowIndexString } = req.params;
     const updatedRow = req.body.data;
     const rowIndex = parseInt(rowIndexString);
-    const deviceId = getDeviceIdFromHeader(req);
+    const accountId = getAccountIdFromHeader(req);
 
     try {
         const file = await ExcelFile.findById(fileId);
@@ -148,7 +147,7 @@ export const updateRowInSheet = async (
         const newRow = {
             ...updatedRow,
             tamY: `${updatedRow.soHieuToBanDo}_${updatedRow.soThuTuThua}`,
-            deviceId,
+            accountId,
         };
 
         sheet.rows[rowIndex] = newRow;
@@ -274,30 +273,4 @@ export const exportWord = (req: Request, res: Response) => {
         console.error(error);
         res.status(500).send('Error exporting file');
     }
-};
-
-export const countRowsByDeviceId = async (req: Request, res: Response) => {
-    const deviceId = getDeviceIdFromHeader(req);
-    const fileId = req.params.fileId;
-    const sheetName = req.params.sheetName;
-    if (!deviceId) {
-        res.status(401).send('Unauthorized');
-        return;
-    }
-    if (!fileId) {
-        res.status(400).send('No file id provided');
-        return;
-    }
-    if (!sheetName) {
-        res.status(400).send('No sheet name provided');
-        return;
-    }
-    const result = await countRowsByDevice({
-        deviceId,
-        fileId,
-        sheetName,
-    });
-    res.status(200).json({
-        data: result,
-    });
 };

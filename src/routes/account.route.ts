@@ -1,8 +1,19 @@
 import express from 'express';
-import { createAccount, findAccount } from '../services/account.service';
+import {
+    createAccount,
+    getAccount,
+    getAllAccounts,
+    login,
+    updateAccount,
+} from '../services/account.service';
 
 export const accountRoute = express.Router();
 
-accountRoute.post('/', createAccount);
+accountRoute.post('/signup', createAccount);
+accountRoute.post('/login', login);
 
-accountRoute.get('/', findAccount);
+accountRoute.get('/getAll/:date', getAllAccounts);
+
+accountRoute.put('/', updateAccount);
+
+accountRoute.get('/', getAccount);
