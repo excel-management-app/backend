@@ -44,8 +44,10 @@ export const exportDataToword = async (
             res.status(400).send('Invalid row index.');
             return;
         }
-        let pathFileTemplate = '';
-        let content: PizZip.LoadData;
+        // eslint-disable-next-line no-var
+        var pathFileTemplate = '';
+        // eslint-disable-next-line no-var
+        var content: PizZip.LoadData;
         try {
             pathFileTemplate =
                 global.localStorage.getItem('templateWord') || '';
