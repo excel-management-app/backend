@@ -33,15 +33,23 @@ export const uploadExcelFile = async (
 };
 
 export const uploadWordFile = (req: Request, res: Response) => {
+    
     try {
         if (!req.file) {
             res.status(400).send('No file uploaded.');
             return;
         }
 
+        const typeFile = req.body.type;
+
         const filePath = req.file.path;
 
-        global.localStorage.setItem('templateWord', filePath);
+        if(typeFile.toString() == "1") {
+            global.localStorage.setItem('wordCapMoi', filePath);
+        } 
+        if(typeFile.toString() == "2") {
+            global.localStorage.setItem('wordCapDoi', filePath);
+        } 
         // Insert the Excel file into the database
         res.status(200).send({
             message: 'File successfully processed and data inserted.',
