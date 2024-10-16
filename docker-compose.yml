@@ -1,0 +1,27 @@
+version: '3.6'
+services:
+    server:
+        build:
+            context: .
+            dockerfile: ./Dockerfile
+        container_name: server
+        ports:
+            - '3001:3001'
+        restart: always
+        env_file:
+            - .env
+        environment:
+            - MONGO_URI=mongodb://mongoDB:27017/excelDB
+        depends_on:
+            - database
+
+    database:
+        image: mongo:latest
+        container_name: mongoDB
+        ports:
+            - '27018:27017'
+        volumes:
+            - db_data:/data/db # Persisting data in a volume
+
+volumes:
+    db_data:
