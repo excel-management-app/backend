@@ -21,7 +21,19 @@ services:
         ports:
             - '27018:27017'
         volumes:
-            - db_data:/data/db # Persisting data in a volume
+            - db_data:/data/db
+
+    frontend:
+        build:
+            context: ../frontend # Assumes your React app is in a folder named 'frontend'
+            dockerfile: Dockerfile
+        container_name: frontend
+        ports:
+            - '3000:3000'
+        environment:
+            - VITE_API_URL=http://localhost:3001 # Pass backend URL as env var
+        depends_on:
+            - server # Ensure server is started first
 
 volumes:
     db_data:
