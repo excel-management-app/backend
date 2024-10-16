@@ -44,7 +44,7 @@ fileRoute.delete(
 );
 
 fileRoute.get('/:fileId/export', exportFile);
-fileRoute.get('/:fileId/downloadWord', exportWord);
+fileRoute.get('/:rowIndex/downloadWord', exportWord);
 fileRoute.get('/:fileId', getFileData);
 
 fileRoute.get('/', getFiles);

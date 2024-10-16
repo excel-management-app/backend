@@ -267,11 +267,20 @@ export const exportFile = async (
 };
 
 export const exportWord = (req: Request, res: Response) => {
-    const { fileId } = req.params;
-
+    const { rowIndex } = req.params;
+    console.log("fileId======", rowIndex);
     try {
-        const filePath = `${OUTPUT_FILE_PATH}document-${fileId}.zip`;
-        res.download(filePath, `document-${fileId}.zip`, (err) => {
+        const filePath = `${OUTPUT_FILE_PATH}word_file-${rowIndex}.docx`;
+
+        
+        // console.log("path===",path.resolve(__dirname, fileName))
+        // res.download('src/files/exports/', fileName, (err) => {
+        //     if (err) {
+        //         console.error(err);
+        //         res.status(500).send('Error downloading the file.');
+        //     }
+        // });
+        res.download(filePath, `word_file-${rowIndex}.docx`, (err) => {
             if (err) {
                 console.error(err);
                 res.status(500).send('Error downloading the file.');

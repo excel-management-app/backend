@@ -4,6 +4,7 @@ import { Request, Response } from 'express';
 import fs from 'fs';
 import {} from 'lodash';
 import { LocalStorage } from 'node-localstorage';
+import { LOAI_DAT } from "../utils/formFields";
 import path from 'path';
 import PizZip from 'pizzip';
 import ExcelFile from '../models/excelFile';
@@ -12,6 +13,11 @@ import { OUTPUT_FILE_PATH } from './functions/exportExcelDataFromDB';
 import { getAccountIdFromHeader } from './functions/getAccountIdFromHeader';
 
 global.localStorage = new LocalStorage('./scratch');
+
+function getLandDescription(code: string) {
+    const description = LOAI_DAT[code.toUpperCase()];
+    return description ? description : "";
+  }
 
 // In dữ liệu từ 1 row ra word
 export const exportManytoWord = async (
@@ -203,6 +209,21 @@ export const exportOneToWord = async (
 
         const nameFile = dataExport.get('soHieuToBanDo')+dataExport.get('soThuTuThua');
             const type = dataExport.get('loaiDon');
+            const loaiDat1: string = dataExport.get('loaiDat1'); 
+            console.log("loaiDat1========",loaiDat1 )
+
+
+            dataExport.set('loaiDat1', getLandDescription(loaiDat1) );
+
+            const loaiDat2 = dataExport.get('loaiDat2'); 
+            dataExport.set('loaiDat2', getLandDescription(loaiDat2));
+
+            const loaiDatCu1 = dataExport.get('loaiDatCu1'); 
+            dataExport.set('loaiDatCu1', getLandDescription(loaiDatCu1));
+
+            const loaiDatCu2 = dataExport.get('loaiDatCu2'); 
+            dataExport.set('loaiDatCu2', getLandDescription(loaiDatCu2));
+
             const dataToWord = dataExport.toJSON();
             var pathFileTemplate = '';
             // eslint-disable-next-line no-var
@@ -255,17 +276,12 @@ export const exportOneToWord = async (
             }
 
             const buf = doc.getZip().generate({ type: 'nodebuffer' });
-            const fileName = `${type}-${nameFile}-${timestamp}.docx`;
+            const fileName = `word_file-${rowIndex}.docx`;
 
             fs.writeFileSync(path.resolve(__dirname,`../files/exports/${fileName}` ), buf);
 
-            console.log("path===",path.resolve(__dirname, fileName))
-            // res.download('src/files/exports/', fileName, (err) => {
-            //     if (err) {
-            //         console.error(err);
-            //         res.status(500).send('Error downloading the file.');
-            //     }
-            // });
+            res.status(200).send('Tạo file thành công: ');
+           
 
     } catch (error: any) {
         res.status(500).send('Error updating row: ' + error.message);
