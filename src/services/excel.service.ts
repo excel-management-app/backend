@@ -237,16 +237,16 @@ export const getFiles = async (_req: Request, res: Response) => {
 };
 
 // export file
-export const exportFile = async (
+export const exportFileBySheet = async (
     req: Request,
     res: Response,
 ): Promise<void> => {
-    const { fileId } = req.params;
-
     try {
-        await exportExcelDataFromDB({ fileId });
-        const filePath = `${OUTPUT_FILE_PATH}exported_file${fileId}.xlsx`;
-        res.download(filePath, 'exported_file.xlsx', (err) => {
+        const { fileId, sheetName } = req.params;
+
+        await exportExcelDataFromDB({ fileId, sheetName });
+        const filePath = `${OUTPUT_FILE_PATH}exported_file_${fileId}_${sheetName}.xlsx`;
+        res.download(filePath, `exported_file_${sheetName}.xlsx`, (err) => {
             if (err) {
                 console.error(err);
                 res.status(500).send('Error downloading the file.');
