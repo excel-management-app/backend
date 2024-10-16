@@ -58,11 +58,10 @@ export const addRowToSheet = async (
     req: Request,
     res: Response,
 ): Promise<void> => {
-    const { fileId, sheetName } = req.params;
-    const newRowData = req.body.data;
-    const accountId = getAccountIdFromHeader(req);
-
     try {
+        const { fileId, sheetName } = req.params;
+        const newRowData = req.body.data;
+        const accountId = getAccountIdFromHeader(req);
         const tamY = `${newRowData.soHieuToBanDo}_${newRowData.soThuTuThua}`;
         const fileExistsWithSheetAndRow = await ExcelFile.exists({
             _id: fileId,
@@ -119,12 +118,11 @@ export const updateRowInSheet = async (
     req: Request,
     res: Response,
 ): Promise<void> => {
-    const { fileId, sheetName, rowIndex: rowIndexString } = req.params;
-    const updatedRow = req.body.data;
-    const rowIndex = parseInt(rowIndexString);
-    const accountId = getAccountIdFromHeader(req);
-
     try {
+        const { fileId, sheetName, rowIndex: rowIndexString } = req.params;
+        const updatedRow = req.body.data;
+        const rowIndex = parseInt(rowIndexString);
+        const accountId = getAccountIdFromHeader(req);
         const file = await ExcelFile.findById(fileId);
         if (!file) {
             res.status(404).send('File not found.');
@@ -167,10 +165,9 @@ export const deleteRowFromSheet = async (
     req: Request,
     res: Response,
 ): Promise<void> => {
-    const { fileId, sheetName, rowIndex: rowIndexString } = req.params;
-    const rowIndex = parseInt(rowIndexString);
-
     try {
+        const { fileId, sheetName, rowIndex: rowIndexString } = req.params;
+        const rowIndex = parseInt(rowIndexString);
         const file = await ExcelFile.findById(fileId);
         if (!file) {
             res.status(404).send('File not found.');
@@ -204,14 +201,12 @@ export const getFileData = async (
     req: Request,
     res: Response,
 ): Promise<void> => {
-    const { fileId } = req.params;
-
     try {
+        const { fileId } = req.params;
         const file = await ExcelFile.findById(fileId);
 
         if (!file) {
             res.status(404).send('File not found.');
-
             return;
         }
 
@@ -259,9 +254,8 @@ export const exportFileBySheet = async (
 };
 
 export const exportWord = (req: Request, res: Response) => {
-    const { fileId } = req.params;
-
     try {
+        const { fileId } = req.params;
         const filePath = `${OUTPUT_FILE_PATH}document-${fileId}.zip`;
         res.download(filePath, `document-${fileId}.zip`, (err) => {
             if (err) {
