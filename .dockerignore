@@ -1,0 +1,15 @@
+//.gitignore
+
+node_modules
+package-lock.json
+dist
+.github
+node_modules
+build
+coverage
+terraform
+.github
+.reports
+.templates
+.watchDocx
+.local
