@@ -291,6 +291,37 @@ export const exportOneToWord = async (
 
             fs.writeFileSync(path.resolve(__dirname,`../files/exports/${fileName}` ), buf);
 
+            const now = new Date();
+
+            // Tạo thời gian bắt đầu của ngày hôm nay (00:00:00)
+            const startOfDay = new Date(now.setHours(0, 0, 0, 0));
+
+            // Tạo thời gian kết thúc của ngày hôm nay (23:59:59.999)
+            const endOfDay = new Date(now.setHours(23, 59, 59, 999));
+
+            const accountId = getAccountIdFromHeader(req);
+            const statistic = await Statistic.find({
+                accountId,
+                createdAt: { $gte: startOfDay, $lte: endOfDay },
+            });
+            console.log("statistic=====",statistic);
+            if (statistic.length > 0) {
+                await Statistic.findByIdAndUpdate(
+                    statistic[0]._id,
+                    { count: Number(statistic[0]?.count)+1 },
+                    {
+                        new: true,
+                    },
+                );
+            } else {
+                console.log("accountId=====",accountId);
+                await Statistic.create({
+                    accountId,
+                    count: 1,
+                    createdAt: now,
+                });
+            }
+
             res.status(200).send('Tạo file thành công: ');
            
 
