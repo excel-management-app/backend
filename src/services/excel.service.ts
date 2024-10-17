@@ -291,3 +291,22 @@ export const exportWord = (req: Request, res: Response) => {
         res.status(500).send('Error exporting file');
     }
 };
+
+
+export const exportManyWord = (req: Request, res: Response) => {
+    const { fileId } = req.params;
+    console.log("fileId======", fileId);
+    try {
+        
+        const filePath = `${OUTPUT_FILE_PATH}document-${fileId}.zip`;
+        res.download(filePath, `document-${fileId}.zip`, (err) => {
+            if (err) {
+                console.error(err);
+                res.status(500).send('Error downloading the file.');
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error exporting file');
+    }
+};

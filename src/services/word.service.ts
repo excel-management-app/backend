@@ -110,8 +110,21 @@ export const exportManytoWord = async (
         // Tạo các file .docx và thêm vào file zip
         lstData.forEach((index: number) => {
             const dataDB = sheet.rows[index];
-            const nameFile = dataDB.get('soHieuToBanDo')+dataDB.get('soThuTuThua');
+            const nameFile = dataDB.get('soHieuToBanDo')+"_"+dataDB.get('soThuTuThua');
             const type = dataDB.get('loaiDon');
+            const loaiDat1: string = dataDB.get('loaiDat1'); 
+
+            dataDB.set('loaiDat1', getLandDescription(loaiDat1) );
+
+            const loaiDat2 = dataDB.get('loaiDat2'); 
+            dataDB.set('loaiDat2', getLandDescription(loaiDat2));
+
+            const loaiDatCu1 = dataDB.get('loaiDatCu1'); 
+            dataDB.set('loaiDatCu1', getLandDescription(loaiDatCu1));
+
+            const loaiDatCu2 = dataDB.get('loaiDatCu2'); 
+            dataDB.set('loaiDatCu2', getLandDescription(loaiDatCu2));
+
             const dataToWord = dataDB.toJSON();
             var pathFileTemplate = '';
             // eslint-disable-next-line no-var
@@ -164,7 +177,7 @@ export const exportManytoWord = async (
             }
 
             const buf = doc.getZip().generate({ type: 'nodebuffer' });
-            const fileName = `${type}-${nameFile}-${timestamp}.docx`;
+            const fileName = `${type}-${nameFile}.docx`;
             filesInZip.push(fileName);
             archive.append(buf, { name: fileName }); // Thêm file .docx vào file zip
         });
@@ -210,8 +223,6 @@ export const exportOneToWord = async (
         const nameFile = dataExport.get('soHieuToBanDo')+dataExport.get('soThuTuThua');
             const type = dataExport.get('loaiDon');
             const loaiDat1: string = dataExport.get('loaiDat1'); 
-            console.log("loaiDat1========",loaiDat1 )
-
 
             dataExport.set('loaiDat1', getLandDescription(loaiDat1) );
 

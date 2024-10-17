@@ -9,6 +9,7 @@ import {
     getFiles,
     exportFile,
     exportWord,
+    exportManyWord,
     uploadWordFile,
 } from '../services/excel.service';
 import { checkAdminMiddleware } from '../middlewares/isAdmin';
@@ -45,6 +46,7 @@ fileRoute.delete(
 
 fileRoute.get('/:fileId/export', exportFile);
 fileRoute.get('/:rowIndex/downloadWord', exportWord);
+fileRoute.get('/:fileId/downloadManyWord', exportManyWord);
 fileRoute.get('/:fileId', getFileData);
 
 fileRoute.get('/', getFiles);
