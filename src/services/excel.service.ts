@@ -39,9 +39,16 @@ export const uploadWordFile = (req: Request, res: Response) => {
             return;
         }
 
+        const typeFile = req.body.type;
+
         const filePath = req.file.path;
 
-        global.localStorage.setItem('templateWord', filePath);
+        if (typeFile.toString() == '1') {
+            global.localStorage.setItem('wordCapMoi', filePath);
+        }
+        if (typeFile.toString() == '2') {
+            global.localStorage.setItem('wordCapDoi', filePath);
+        }
         // Insert the Excel file into the database
         res.status(200).send({
             message: 'File successfully processed and data inserted.',
@@ -254,6 +261,24 @@ export const exportFileBySheet = async (
 };
 
 export const exportWord = (req: Request, res: Response) => {
+    const { rowIndex } = req.params;
+
+    try {
+        const filePath = `${OUTPUT_FILE_PATH}word_file-${rowIndex}.docx`;
+
+        res.download(filePath, `word_file-${rowIndex}.docx`, (err) => {
+            if (err) {
+                console.error(err);
+                res.status(500).send('Error downloading the file.');
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error exporting file');
+    }
+};
+
+export const exportManyWord = (req: Request, res: Response) => {
     try {
         const { fileId } = req.params;
         const filePath = `${OUTPUT_FILE_PATH}document-${fileId}.zip`;

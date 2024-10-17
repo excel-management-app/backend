@@ -8,6 +8,7 @@ import {
     getFileData,
     getFiles,
     exportWord,
+    exportManyWord,
     uploadWordFile,
     exportFileBySheet,
 } from '../services/excel.service';
@@ -48,6 +49,8 @@ fileRoute.delete(
     deleteRowFromSheet,
 );
 
+fileRoute.get('/:rowIndex/downloadWord', exportWord);
+fileRoute.get('/:fileId/downloadManyWord', exportManyWord);
 fileRoute.get('/:fileId/sheets/:sheetName/export', exportFileBySheet);
 fileRoute.get('/:fileId/downloadWord', exportWord);
 fileRoute.get('/:fileId', getFileData);
