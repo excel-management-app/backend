@@ -8,15 +8,18 @@ dist/
 # misc
 .DS_Store
 
-
-
+# server
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 yarn.lock
+
+# vscode
 .vscode
 note.txt
 .vercel
 
 
-scratch/
+src/scratch/
+src/files/exports/
+src/files/templates/

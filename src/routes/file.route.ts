@@ -7,10 +7,10 @@ import {
     updateRowInSheet,
     getFileData,
     getFiles,
-    exportFile,
     exportWord,
     exportManyWord,
     uploadWordFile,
+    exportFileBySheet,
 } from '../services/excel.service';
 import { checkAdminMiddleware } from '../middlewares/isAdmin';
 
@@ -27,7 +27,12 @@ const upload = multer({ storage });
 
 export const fileRoute = express.Router();
 
-fileRoute.post('/upload', upload.single('file'), uploadExcelFile);
+fileRoute.post(
+    '/upload',
+    checkAdminMiddleware,
+    upload.single('file'),
+    uploadExcelFile,
+);
 
 fileRoute.post(
     '/uploadTemplateWord',
@@ -44,9 +49,10 @@ fileRoute.delete(
     deleteRowFromSheet,
 );
 
-fileRoute.get('/:fileId/export', exportFile);
 fileRoute.get('/:rowIndex/downloadWord', exportWord);
 fileRoute.get('/:fileId/downloadManyWord', exportManyWord);
+fileRoute.get('/:fileId/sheets/:sheetName/export', exportFileBySheet);
+fileRoute.get('/:fileId/downloadWord', exportWord);
 fileRoute.get('/:fileId', getFileData);
 
 fileRoute.get('/', getFiles);

@@ -33,7 +33,6 @@ export const uploadExcelFile = async (
 };
 
 export const uploadWordFile = (req: Request, res: Response) => {
-    
     try {
         if (!req.file) {
             res.status(400).send('No file uploaded.');
@@ -44,12 +43,12 @@ export const uploadWordFile = (req: Request, res: Response) => {
 
         const filePath = req.file.path;
 
-        if(typeFile.toString() == "1") {
+        if (typeFile.toString() == '1') {
             global.localStorage.setItem('wordCapMoi', filePath);
-        } 
-        if(typeFile.toString() == "2") {
+        }
+        if (typeFile.toString() == '2') {
             global.localStorage.setItem('wordCapDoi', filePath);
-        } 
+        }
         // Insert the Excel file into the database
         res.status(200).send({
             message: 'File successfully processed and data inserted.',
@@ -66,11 +65,10 @@ export const addRowToSheet = async (
     req: Request,
     res: Response,
 ): Promise<void> => {
-    const { fileId, sheetName } = req.params;
-    const newRowData = req.body.data;
-    const accountId = getAccountIdFromHeader(req);
-
     try {
+        const { fileId, sheetName } = req.params;
+        const newRowData = req.body.data;
+        const accountId = getAccountIdFromHeader(req);
         const tamY = `${newRowData.soHieuToBanDo}_${newRowData.soThuTuThua}`;
         const fileExistsWithSheetAndRow = await ExcelFile.exists({
             _id: fileId,
@@ -127,12 +125,11 @@ export const updateRowInSheet = async (
     req: Request,
     res: Response,
 ): Promise<void> => {
-    const { fileId, sheetName, rowIndex: rowIndexString } = req.params;
-    const updatedRow = req.body.data;
-    const rowIndex = parseInt(rowIndexString);
-    const accountId = getAccountIdFromHeader(req);
-
     try {
+        const { fileId, sheetName, rowIndex: rowIndexString } = req.params;
+        const updatedRow = req.body.data;
+        const rowIndex = parseInt(rowIndexString);
+        const accountId = getAccountIdFromHeader(req);
         const file = await ExcelFile.findById(fileId);
         if (!file) {
             res.status(404).send('File not found.');
@@ -175,10 +172,9 @@ export const deleteRowFromSheet = async (
     req: Request,
     res: Response,
 ): Promise<void> => {
-    const { fileId, sheetName, rowIndex: rowIndexString } = req.params;
-    const rowIndex = parseInt(rowIndexString);
-
     try {
+        const { fileId, sheetName, rowIndex: rowIndexString } = req.params;
+        const rowIndex = parseInt(rowIndexString);
         const file = await ExcelFile.findById(fileId);
         if (!file) {
             res.status(404).send('File not found.');
@@ -212,14 +208,12 @@ export const getFileData = async (
     req: Request,
     res: Response,
 ): Promise<void> => {
-    const { fileId } = req.params;
-
     try {
+        const { fileId } = req.params;
         const file = await ExcelFile.findById(fileId);
 
         if (!file) {
             res.status(404).send('File not found.');
-
             return;
         }
 
@@ -245,16 +239,16 @@ export const getFiles = async (_req: Request, res: Response) => {
 };
 
 // export file
-export const exportFile = async (
+export const exportFileBySheet = async (
     req: Request,
     res: Response,
 ): Promise<void> => {
-    const { fileId } = req.params;
-
     try {
-        await exportExcelDataFromDB({ fileId });
-        const filePath = `${OUTPUT_FILE_PATH}exported_file${fileId}.xlsx`;
-        res.download(filePath, 'exported_file.xlsx', (err) => {
+        const { fileId, sheetName } = req.params;
+
+        await exportExcelDataFromDB({ fileId, sheetName });
+        const filePath = `${OUTPUT_FILE_PATH}exported_file_${fileId}_${sheetName}.xlsx`;
+        res.download(filePath, `exported_file_${sheetName}.xlsx`, (err) => {
             if (err) {
                 console.error(err);
                 res.status(500).send('Error downloading the file.');
@@ -268,18 +262,10 @@ export const exportFile = async (
 
 export const exportWord = (req: Request, res: Response) => {
     const { rowIndex } = req.params;
-    console.log("fileId======", rowIndex);
+
     try {
         const filePath = `${OUTPUT_FILE_PATH}word_file-${rowIndex}.docx`;
 
-        
-        // console.log("path===",path.resolve(__dirname, fileName))
-        // res.download('src/files/exports/', fileName, (err) => {
-        //     if (err) {
-        //         console.error(err);
-        //         res.status(500).send('Error downloading the file.');
-        //     }
-        // });
         res.download(filePath, `word_file-${rowIndex}.docx`, (err) => {
             if (err) {
                 console.error(err);
@@ -292,12 +278,9 @@ export const exportWord = (req: Request, res: Response) => {
     }
 };
 
-
 export const exportManyWord = (req: Request, res: Response) => {
-    const { fileId } = req.params;
-    console.log("fileId======", fileId);
     try {
-        
+        const { fileId } = req.params;
         const filePath = `${OUTPUT_FILE_PATH}document-${fileId}.zip`;
         res.download(filePath, `document-${fileId}.zip`, (err) => {
             if (err) {

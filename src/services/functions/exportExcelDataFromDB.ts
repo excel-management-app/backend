@@ -5,7 +5,13 @@ import { RowData } from '../types';
 
 const EXPORT_TEMPLATE_PATH = 'src/files/templates/export_template.xlsx';
 export const OUTPUT_FILE_PATH = 'src/files/exports/';
-export async function exportExcelDataFromDB({ fileId }: { fileId: string }) {
+export async function exportExcelDataFromDB({
+    fileId,
+    sheetName,
+}: {
+    fileId: string;
+    sheetName: string;
+}) {
     try {
         const mongoInstance = MongoDB.getInstance();
         await mongoInstance.connect();
@@ -18,18 +24,16 @@ export async function exportExcelDataFromDB({ fileId }: { fileId: string }) {
         const workbook = new ExcelJS.Workbook();
         await workbook.xlsx.readFile(EXPORT_TEMPLATE_PATH);
 
-        // File Nhap Tong
         const sheetToExport = fileData.sheets.find(
-            (sheet) => sheet.sheetName === 'File nhap tong',
+            (sheet) => sheet.sheetName === sheetName,
         );
         if (!sheetToExport) {
             throw new Error('Sheet not found in the template.');
         }
-        const sheetName: string = sheetToExport.sheetName as string;
-        const worksheet = workbook.getWorksheet(sheetName);
+        const worksheet = workbook.getWorksheet(1);
 
         if (!worksheet) {
-            throw new Error(`Sheet ${sheetName} not found in the template.`);
+            throw new Error(`Sheet not found in the template.`);
         }
 
         const rows: RowData[] = sheetToExport.rows as unknown as RowData[];
@@ -68,7 +72,7 @@ export async function exportExcelDataFromDB({ fileId }: { fileId: string }) {
         });
 
         await workbook.xlsx.writeFile(
-            `${OUTPUT_FILE_PATH}exported_file${fileId}.xlsx`,
+            `${OUTPUT_FILE_PATH}exported_file_${fileId}_${sheetName}.xlsx`,
         );
     } catch (error) {
         console.error(error);
