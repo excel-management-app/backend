@@ -113,8 +113,10 @@ export const addRowToSheet = async (
         });
 
         await file.save();
-
-        res.status(200).send('Row added successfully');
+        res.status(200).json({
+            message: 'Row added successfully',
+            rowIndex: sheet.rows.length - 1,
+        });
     } catch (error: any) {
         res.status(500).send('Error adding row: ' + error.message);
     }
