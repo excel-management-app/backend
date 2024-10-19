@@ -26,18 +26,17 @@ export const exportManytoWord = async (
 ): Promise<void> => {
     const { fileId, sheetName } = req.params;
     const rowIndex = req.body.data;
-
     try {
         const file = await ExcelFile.findById(fileId);
         if (!file) {
-            res.status(404).send('File not found.');
+            res.status(400).send('File not found.');
 
             return;
         }
 
         const sheet = file.sheets.find((s) => s.sheetName === sheetName);
         if (!sheet) {
-            res.status(404).send('Sheet not found.');
+            res.status(400).send('Sheet not found.');
 
             return;
         }
@@ -220,8 +219,13 @@ export const exportOneToWord = async (
         const timestamp = new Date().getTime();
         const dataExport = sheet.rows[rowIndex];
 
+        
+
         const nameFile = dataExport.get('soHieuToBanDo')+dataExport.get('soThuTuThua');
             const type = dataExport.get('loaiDon');
+
+            const dientichtangthem = Number(dataExport.get('Dientichtangthem'));
+            dataExport.set('Dientichtangthem', parseFloat(dientichtangthem.toFixed(1)) );
             const loaiDat1: string = dataExport.get('loaiDat1'); 
 
             dataExport.set('loaiDat1', getLandDescription(loaiDat1) );
