@@ -111,6 +111,15 @@ export const exportManytoWord = async (
             const dataDB = sheet.rows[index];
             const nameFile = dataDB.get('soHieuToBanDo')+"_"+dataDB.get('soThuTuThua');
             const type = dataDB.get('loaiDon');
+
+            dataDB.set('gioiTinh', dataDB.get('gioiTinh') == 1 ? "Ông" : "Bà" );
+            dataDB.set('gioiTinh2', dataDB.get('gioiTinh2') == 1 ? "Ông" : "Bà" );
+            dataDB.set('gioiTinhCu', dataDB.get('gioiTinhCu') == 1 ? "Ông" : "Bà" );
+            dataDB.set('gioiTinhCu2', dataDB.get('gioiTinhCu2') == 1 ? "Ông" : "Bà" );
+
+            const dientichtangthem = Number(dataDB.get('Dientichtangthem'));
+            dataDB.set('Dientichtangthem', parseFloat(dientichtangthem.toFixed(1)) );
+
             const loaiDat1: string = dataDB.get('loaiDat1'); 
 
             dataDB.set('loaiDat1', getLandDescription(loaiDat1) );
@@ -224,8 +233,17 @@ export const exportOneToWord = async (
         const nameFile = dataExport.get('soHieuToBanDo')+dataExport.get('soThuTuThua');
             const type = dataExport.get('loaiDon');
 
+            //convert giới tính
+            dataExport.set('gioiTinh', dataExport.get('gioiTinh') == 1 ? "Ông" : "Bà" );
+            dataExport.set('gioiTinh2', dataExport.get('gioiTinh2') == 1 ? "Ông" : "Bà" );
+            dataExport.set('gioiTinhCu', dataExport.get('gioiTinhCu') == 1 ? "Ông" : "Bà" );
+            dataExport.set('gioiTinhCu2', dataExport.get('gioiTinhCu2') == 1 ? "Ông" : "Bà" );
+
+            //convert dientichtangthem
             const dientichtangthem = Number(dataExport.get('Dientichtangthem'));
             dataExport.set('Dientichtangthem', parseFloat(dientichtangthem.toFixed(1)) );
+
+            //convert loại đất
             const loaiDat1: string = dataExport.get('loaiDat1'); 
 
             dataExport.set('loaiDat1', getLandDescription(loaiDat1) );
