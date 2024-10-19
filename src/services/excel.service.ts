@@ -7,6 +7,10 @@ import {
 } from './functions/exportExcelDataFromDB';
 import { getAccountIdFromHeader } from './functions/getAccountIdFromHeader';
 import { insertExcelDataToDB } from './functions/insertExcelDataToDB';
+import mongoose from 'mongoose';
+import MongoDB from '../db';
+import { GridFSBucket, ObjectId } from 'mongodb';
+import { getGridFsFileById } from './functions/getGridFsFile';
 
 global.localStorage = new LocalStorage('./scratch');
 
@@ -212,34 +216,74 @@ export const getFileData = async (
 ): Promise<void> => {
     try {
         const { fileId } = req.params;
-        const file = await ExcelFile.findById(fileId);
 
-        if (!file) {
-            res.status(404).send('File not found.');
-            return;
-        }
+        const gridFsFile = await getGridFsFileById(fileId);
 
-        res.status(200).json({ data: file });
+        // find and combine all sheets of the file into one array of rows
+        // find base on gridFSId
+        const files = await ExcelFile.find({ fileName: gridFsFile.filename });
+        const firstFile = files[0];
+
+        // combine data to result with baseFileInfo and sheets data from files
+
+        const result = {
+            id: firstFile._id,
+            fileName: firstFile.fileName,
+            uploadedAt: firstFile.uploadedAt,
+            sheets: files.reduce(
+                (
+                    acc: { sheetName: string; headers: any; rows: any[] }[],
+                    file,
+                ) => {
+                    file.sheets.forEach((sheet) => {
+                        const existingSheet = acc.find(
+                            (s) => s.sheetName === sheet.sheetName,
+                        );
+                        if (existingSheet) {
+                            existingSheet.rows.push(...sheet.rows);
+                        } else {
+                            acc.push({
+                                sheetName: sheet.sheetName as string,
+                                headers: sheet.headers,
+                                rows: sheet.rows,
+                            });
+                        }
+                    });
+                    return acc;
+                },
+                [],
+            ),
+        };
+
+        res.json({ data: result });
     } catch (error: any) {
+        console.error('Error retrieving file data:', error);
         res.status(500).send('Error retrieving file data: ' + error.message);
     }
 };
-
 // get files
 export const getFiles = async (_req: Request, res: Response) => {
     try {
-        const files = await ExcelFile.find();
-        const data = files.map((file) => ({
-            id: file._id,
-            fileName: file.fileName.replace(/^\d+-/, ''),
+        // Fetch files from GridFS
+        const mongoInstance = MongoDB.getInstance();
+        const db = (await mongoInstance.connect()).db;
+        if (!db) {
+            throw new Error('Failed to connect to the database');
+        }
+        const bucket = new GridFSBucket(db, { bucketName: 'excelFiles' });
+        const filesCursor = bucket.find();
+        const gridFsFiles = await filesCursor.toArray();
+        const gridFsFilesMap = gridFsFiles.map((file) => ({
+            id: file._id.toString(),
+            fileName: file.filename,
         }));
-        res.json({ data });
+
+        res.json({ data: gridFsFilesMap });
     } catch (error) {
-        console.error(error);
+        console.error('Error retrieving files:', error);
         res.status(500).send('Error retrieving files');
     }
 };
-
 // export file
 export const exportFileBySheet = async (
     req: Request,
