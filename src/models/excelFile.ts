@@ -15,6 +15,7 @@ const sheetSchema = new mongoose.Schema({
             }),
         },
     ],
+    fileId: mongoose.Schema.Types.ObjectId,
 });
 
 const excelFileSchema = new mongoose.Schema({

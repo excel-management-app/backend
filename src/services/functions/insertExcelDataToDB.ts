@@ -1,70 +1,146 @@
 import MongoDB from '../../db';
+import { GridFSBucket, ObjectId } from 'mongodb';
 import xlsx from 'xlsx';
 import ExcelFile from '../../models/excelFile';
 import { compact } from 'lodash';
+import fs from 'fs';
+import stream from 'stream';
+
+// Adjust these constants based on your needs 1MB
+const CHUNK_SIZE = 1024 * 1024;
+const BATCH_SIZE = 5000; // Adjust based on your needs
 
 export const insertExcelDataToDB = async (filePath: string): Promise<void> => {
+    const mongoInstance = MongoDB.getInstance();
+    const db = (await mongoInstance.connect()).db;
+    if (!db) {
+        throw new Error('Failed to connect to the database');
+    }
+    const bucket = new GridFSBucket(db, {
+        bucketName: 'excelFiles',
+        chunkSizeBytes: CHUNK_SIZE,
+    });
+
     try {
-        const mongoInstance = MongoDB.getInstance();
-        await mongoInstance.connect();
+        // Upload file to GridFS
+        const fileId = await uploadToGridFS(bucket, filePath);
 
-        const workbook = xlsx.readFile(filePath);
-        const sheetNames = workbook.SheetNames;
+        // Process the uploaded file
+        await processExcelFile(bucket, fileId, filePath);
 
-        const sheets: any[] = [];
-
-        for (let i = 0; i < sheetNames.length; i++) {
-            const sheetName = sheetNames[i];
-            const worksheet = workbook.Sheets[sheetName];
-
-            // Chuyển sheet thành dạng JSON, header: 1 để nhận cả tiêu đề
-            const jsonData: string[][] = xlsx.utils.sheet_to_json(worksheet, {
-                header: 1,
-                defval: '',
-                blankrows: false,
-            });
-
-            if (jsonData.length === 0) {
-                throw new Error('Excel file is empty or has invalid format');
-            }
-
-            // Lấy hàng đầu tiên làm tiêu đề
-            const headers = compact(jsonData[0]);
-
-            // Tạo dữ liệu cho các hàng, bắt đầu từ hàng thứ 2
-            const filteredRows = jsonData
-                .slice(1)
-                .filter((row) => Object.values(row).some((v) => v !== ''));
-
-            const rows = filteredRows.map((row) => {
-                const rowObject: any = {};
-
-                // Lặp qua từng cell của hàng và khớp với tiêu đề tương ứng
-                row.forEach((cell, index) => {
-                    const headerName = headers[index];
-                    rowObject[headerName] = cell;
-                });
-
-                return rowObject;
-            });
-
-            sheets.push({ sheetName, headers, rows });
-        }
-
-        const newExcelFile = new ExcelFile({
-            fileName: getFileName(filePath),
-            sheets,
-        });
-
-        await newExcelFile.save();
+        console.log(`Successfully processed ${filePath}`);
     } catch (error) {
-        console.error('Lỗi khi chèn dữ liệu Excel vào MongoDB:', error);
+        console.error('Error processing Excel file:', error);
         throw error;
     }
 };
 
+async function uploadToGridFS(
+    bucket: GridFSBucket,
+    filePath: string,
+): Promise<ObjectId> {
+    return new Promise((resolve, reject) => {
+        const uploadStream = bucket.openUploadStream(getFileName(filePath));
+        const fileStream = fs.createReadStream(filePath);
+
+        fileStream
+            .pipe(uploadStream)
+            .on('error', reject)
+            .on('finish', () => resolve(uploadStream.id));
+    });
+}
+
+async function processExcelFile(
+    bucket: GridFSBucket,
+    fileId: ObjectId,
+    originalFilePath: string,
+): Promise<void> {
+    const downloadStream = bucket.openDownloadStream(fileId);
+    const bufferStream = new stream.PassThrough();
+    downloadStream.pipe(bufferStream);
+
+    const workbook = await new Promise<xlsx.WorkBook>((resolve, reject) => {
+        const buffers: Buffer[] = [];
+        bufferStream.on('data', (chunk) => buffers.push(chunk));
+        bufferStream.on('end', () => {
+            const buffer = Buffer.concat(buffers);
+            try {
+                const wb = xlsx.read(buffer, { type: 'buffer' });
+                resolve(wb);
+            } catch (error) {
+                // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+                reject(error);
+            }
+        });
+        bufferStream.on('error', reject);
+    });
+
+    const fileName = getFileName(originalFilePath);
+    let totalRowsInserted = 0;
+
+    for (const sheetName of workbook.SheetNames) {
+        const worksheet = workbook.Sheets[sheetName];
+
+        const jsonData: any[][] = xlsx.utils.sheet_to_json(worksheet, {
+            header: 1,
+            defval: '',
+            blankrows: false,
+        });
+
+        if (jsonData.length === 0) {
+            console.warn(
+                `Sheet "${sheetName}" is empty or has invalid format. Skipping.`,
+            );
+            continue;
+        }
+
+        const headers = compact(jsonData[0]);
+
+        for (let i = 1; i < jsonData.length; i += BATCH_SIZE) {
+            const batchRows = jsonData
+                .slice(i, i + BATCH_SIZE)
+                .filter((row) => row.some((cell) => cell !== ''))
+                .map((row) => {
+                    const rowObject: any = {};
+                    headers.forEach((header, index) => {
+                        rowObject[header] = row[index];
+                    });
+                    return rowObject;
+                });
+
+            if (batchRows.length > 0) {
+                const batchExcelFile = new ExcelFile({
+                    fileName,
+                    gridFSId: fileId,
+                    sheets: [
+                        {
+                            sheetName,
+                            headers,
+                            rows: batchRows,
+                        },
+                    ],
+                    fileId: fileId,
+                });
+
+                await batchExcelFile.save();
+                totalRowsInserted += batchRows.length;
+                console.log(
+                    `Inserted batch of ${batchRows.length} rows from sheet "${sheetName}"`,
+                );
+            }
+        }
+    }
+
+    if (totalRowsInserted === 0) {
+        throw new Error('No valid data found in the Excel file');
+    }
+
+    console.log(
+        `Successfully imported ${totalRowsInserted} rows from ${originalFilePath}`,
+    );
+}
+
 function getFileName(filePath: string): string {
-    //  Split by both '/' and '\\' to support both Unix and Windows paths
     const parts = filePath.split(/[/\\]/);
     const fileNameWithPrefix = parts[parts.length - 1];
     return fileNameWithPrefix.replace(/^\d+-/, '');
