@@ -20,6 +20,12 @@ note.txt
 .vercel
 
 
-scratch/
+scratch/templateWord
+scratch/wordCapDoi
+scratch/wordCapMoi
+
 src/files/exports/
 src/files/templates/
+
+# env
+.env
