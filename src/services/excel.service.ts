@@ -1,16 +1,15 @@
 import { Request, Response } from 'express';
+import { GridFSBucket } from 'mongodb';
 import { LocalStorage } from 'node-localstorage';
+import MongoDB from '../db';
 import ExcelFile from '../models/excelFile';
 import {
     exportExcelDataFromDB,
     OUTPUT_FILE_PATH,
 } from './functions/exportExcelDataFromDB';
 import { getAccountIdFromHeader } from './functions/getAccountIdFromHeader';
-import { insertExcelDataToDB } from './functions/insertExcelDataToDB';
-import mongoose from 'mongoose';
-import MongoDB from '../db';
-import { GridFSBucket, ObjectId } from 'mongodb';
 import { getGridFsFileById } from './functions/getGridFsFile';
+import { insertExcelDataToDB } from './functions/insertExcelDataToDB';
 
 global.localStorage = new LocalStorage('./scratch');
 
@@ -72,7 +71,7 @@ export const addRowToSheet = async (
     try {
         const { fileId, sheetName } = req.params;
         const newRowData = req.body.data;
-        const accountId = getAccountIdFromHeader(req); 
+        const accountId = getAccountIdFromHeader(req);
         const tamY = `${newRowData.soHieuToBanDo}_${newRowData.soThuTuThua}`;
 
         const gridFsFile = await getGridFsFileById(fileId);
@@ -81,7 +80,7 @@ export const addRowToSheet = async (
             res.status(404).send('File not found.');
             return;
         }
-        
+
         const files = await ExcelFile.find({ fileName: gridFsFile.filename });
 
         if (files.length === 0) {
@@ -90,13 +89,18 @@ export const addRowToSheet = async (
         }
 
         // kiểm tra dữ liệu trùng
-        const fileExistsWithSheetAndRow = files.some(file =>
-            file.sheets.some(sheet =>
-                sheet.sheetName === sheetName &&
-                sheet.rows.some(row =>
-                    Object.entries(newRowData).every(([key, value]) => row.get(key) === value) || row.get('tamY') === tamY
-                )
-            )
+        const fileExistsWithSheetAndRow = files.some((file) =>
+            file.sheets.some(
+                (sheet) =>
+                    sheet.sheetName === sheetName &&
+                    sheet.rows.some(
+                        (row) =>
+                            row.get('tamY') === tamY ||
+                            Object.entries(newRowData).every(
+                                ([key, value]) => row.get(key) === value,
+                            ),
+                    ),
+            ),
         );
 
         if (fileExistsWithSheetAndRow) {
@@ -104,97 +108,35 @@ export const addRowToSheet = async (
             return;
         }
 
-        let sheetFound = false;
-        for (const file of files) {
-            const sheet = file.sheets.find((s) => s.sheetName === sheetName);
-            if (sheet) {
-                sheet.rows.push({
-                    ...newRowData,
-                    tamY,
-                    accountId,
-                });
-                sheetFound = true;
-                await file.save(); 
-                break; 
-            }
-        }
+        const sheet = files
+            .flatMap((file) => file.sheets)
+            .find((s) => s.sheetName === sheetName);
 
-        if (!sheetFound) {
+        if (!sheet) {
             res.status(404).send('Sheet not found.');
             return;
         }
 
+        sheet.rows.push({
+            ...newRowData,
+            tamY,
+            accountId,
+        });
+
+        const fileToUpdate = files.find((file) =>
+            file.sheets.some((sheet) => sheet.sheetName === sheetName),
+        );
+
+        if (fileToUpdate) {
+            await fileToUpdate.save();
+        }
         res.status(200).json({
             message: 'Row added successfully',
         });
-
     } catch (error: any) {
         res.status(500).send('Error adding row: ' + error.message);
     }
 };
-
-
-// Thêm hàng mới vào một sheet cụ thể
-// export const addRowToSheet = async (
-//     req: Request,
-//     res: Response,
-// ): Promise<void> => {
-//     try {
-//         const { fileId, sheetName } = req.params;
-//         const newRowData = req.body.data;
-//         const accountId = getAccountIdFromHeader(req);
-//         const tamY = `${newRowData.soHieuToBanDo}_${newRowData.soThuTuThua}`;
-//         const fileExistsWithSheetAndRow = await ExcelFile.exists({
-//             _id: fileId,
-//             'sheets.sheetName': sheetName,
-//             'sheets.rows': {
-//                 $elemMatch: {
-//                     $or: [
-//                         {
-//                             $and: Object.entries(newRowData).map(
-//                                 ([key, value]) => ({
-//                                     [key]: value,
-//                                 }),
-//                             ),
-//                         },
-//                         {
-//                             tamY,
-//                         },
-//                     ],
-//                 },
-//             },
-//         });
-//         if (fileExistsWithSheetAndRow) {
-//             res.status(409).send('Hàng đã tồn tại trong sheet');
-//             return;
-//         }
-//         const file = await ExcelFile.findById(fileId);
-//         if (!file) {
-//             res.status(404).send('File not found.');
-//             return;
-//         }
-
-//         const sheet = file.sheets.find((s) => s.sheetName === sheetName);
-//         if (!sheet) {
-//             res.status(404).send('Sheet not found.');
-//             return;
-//         }
-
-//         sheet.rows.push({
-//             ...newRowData,
-//             tamY,
-//             accountId,
-//         });
-
-//         await file.save();
-//         res.status(200).json({
-//             message: 'Row added successfully',
-//             rowIndex: sheet.rows.length - 1,
-//         });
-//     } catch (error: any) {
-//         res.status(500).send('Error adding row: ' + error.message);
-//     }
-// };
 
 // Sửa một hàng trong sheet
 export const updateRowInSheet = async (
@@ -204,16 +146,17 @@ export const updateRowInSheet = async (
     try {
         const { fileId, sheetName, rowIndex: rowIndexString } = req.params;
         const updatedRow = req.body.data;
+
         const rowIndex = parseInt(rowIndexString);
         const accountId = getAccountIdFromHeader(req);
         const gridFsFile = await getGridFsFileById(fileId);
-        const tamY = `${updatedRow.soHieuToBanDo}_${updatedRow.soThuTuThua}`
+        const tamY = `${updatedRow.soHieuToBanDo}_${updatedRow.soThuTuThua}`;
 
         if (!gridFsFile) {
             res.status(404).send('File not found.');
             return;
         }
-        
+
         const files = await ExcelFile.find({ fileName: gridFsFile.filename });
 
         if (files.length === 0) {
@@ -221,55 +164,10 @@ export const updateRowInSheet = async (
             return;
         }
 
-        let sheetFound = false;
-        for (const file of files) {
-            const sheet = file.sheets.find((s) => s.sheetName === sheetName);
-            if (sheet) {
-                if (rowIndex < 0 || rowIndex >= sheet.rows.length) {
-                    res.status(400).send('Invalid row index.');
-                    return;
-                }
+        const sheet = files
+            .flatMap((file) => file.sheets)
+            .find((s) => s.sheetName === sheetName);
 
-                 const newRow = {
-                    ...updatedRow,
-                    tamY,
-                    accountId,
-                };
-                
-                sheet.rows[rowIndex] = newRow;
-                console.log("rowIdx====",sheet.rows[rowIndex])
-                console.log("=========");
-                console.log("newRow====",newRow)
-                sheetFound = true;
-
-                await file.save(); 
-                break; 
-            }
-        }
-
-        res.status(200).json({
-            message: 'Row updated successfully',
-        });
-    } catch (error: any) {
-        res.status(500).send('Error updating row: ' + error.message);
-    }
-};
-
-// Xóa một hàng khỏi sheet
-export const deleteRowFromSheet = async (
-    req: Request,
-    res: Response,
-): Promise<void> => {
-    try {
-        const { fileId, sheetName, rowIndex: rowIndexString } = req.params;
-        const rowIndex = parseInt(rowIndexString);
-        const file = await ExcelFile.findById(fileId);
-        if (!file) {
-            res.status(404).send('File not found.');
-            return;
-        }
-
-        const sheet = file.sheets.find((s) => s.sheetName === sheetName);
         if (!sheet) {
             res.status(404).send('Sheet not found.');
             return;
@@ -280,15 +178,31 @@ export const deleteRowFromSheet = async (
             return;
         }
 
-        sheet.rows.splice(rowIndex, 1);
+        const newRow = {
+            ...updatedRow,
+            tamY,
+            accountId,
+        };
 
-        await file.save();
+        sheet.rows[rowIndex] = newRow;
+
+        const fileToUpdate = files.find((file) =>
+            file.sheets.some((sheet) => sheet.sheetName === sheetName),
+        );
+
+        if (fileToUpdate) {
+            await ExcelFile.findOneAndUpdate(
+                { _id: fileToUpdate._id },
+                { $set: { sheets: fileToUpdate.sheets } },
+                { new: true },
+            );
+        }
 
         res.status(200).json({
-            message: 'Row deleted successfully',
+            message: 'Row updated successfully',
         });
     } catch (error: any) {
-        res.status(500).send('Error deleting row: ' + error.message);
+        res.status(500).send('Error updating row: ' + error.message);
     }
 };
 
