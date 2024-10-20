@@ -132,6 +132,7 @@ export const addRowToSheet = async (
         }
         res.status(200).json({
             message: 'Row added successfully',
+            tamY,
         });
     } catch (error: any) {
         res.status(500).send('Error adding row: ' + error.message);
