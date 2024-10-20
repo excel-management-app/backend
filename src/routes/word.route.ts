@@ -3,6 +3,6 @@ import { exportManytoWord, exportOneToWord } from '../services/word.service';
 
 export const wordRoute = express.Router();
 
-wordRoute.post('/:fileId/sheets/:sheetName/rows', exportManytoWord);
+wordRoute.post('/:fileId/sheets/:sheetName', exportManytoWord);
 
-wordRoute.get('/:fileId/sheets/:sheetName/rows/:rowIndex', exportOneToWord);
+wordRoute.get('/:fileId/sheets/:sheetName/:tamY', exportOneToWord);

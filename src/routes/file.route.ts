@@ -43,7 +43,7 @@ fileRoute.post(
 fileRoute.put('/:fileId/sheets/:sheetName/rows/:rowIndex', updateRowInSheet);
 fileRoute.post('/:fileId/sheets/:sheetName/rows', addRowToSheet);
 
-fileRoute.get('/:rowIndex/downloadWord', exportWord);
+fileRoute.get('/downloadWord/:tamY', exportWord);
 fileRoute.get('/:fileId/downloadManyWord', exportManyWord);
 fileRoute.get('/:fileId/sheets/:sheetName/export', exportFileBySheet);
 fileRoute.get('/:fileId/downloadWord', exportWord);
