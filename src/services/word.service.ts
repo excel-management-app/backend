@@ -239,6 +239,7 @@ export const exportOneToWord = async (
         );
 
         if (!dataExport) {
+            console.warn('Row not found.');
             res.status(400).send('Row not found.');
             return;
         }

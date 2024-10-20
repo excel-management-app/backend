@@ -10,7 +10,6 @@ import {
 import { getAccountIdFromHeader } from './functions/getAccountIdFromHeader';
 import { getGridFsFileById } from './functions/getGridFsFile';
 import { insertExcelDataToDB } from './functions/insertExcelDataToDB';
-import { RowData, Sheet } from './types';
 
 global.localStorage = new LocalStorage('./scratch');
 
@@ -88,7 +87,7 @@ export const addRowToSheet = async (
             res.status(404).send('File not found.');
             return;
         }
-        const [soHieuToBanDo, soThuTuThua] = tamY.split('_');
+
         // kiểm tra dữ liệu trùng
         const fileExistsWithSheetAndRow = files.some((file) =>
             file.sheets.some(
@@ -96,8 +95,7 @@ export const addRowToSheet = async (
                     sheet.sheetName === sheetName &&
                     sheet.rows.some(
                         (row) =>
-                            (row.get('soHieuToBanDo') == soHieuToBanDo &&
-                                row.get('soThuTuThua') == soThuTuThua) ||
+                            row.get('tamY') === tamY ||
                             Object.entries(newRowData).every(
                                 ([key, value]) => row.get(key) === value,
                             ),
@@ -165,36 +163,17 @@ export const updateRowInSheet = async (
             res.status(404).send('File not found.');
             return;
         }
-        const allFileSheets = files.flatMap((file) => file.sheets);
-        // combine all sheet with the same name from all files
 
-        const combinedSheets = allFileSheets.reduce<Sheet[]>((acc, sheet) => {
-            const existingSheet = acc.find(
-                ({ sheetName }) => sheetName === sheet.sheetName,
-            );
-            if (existingSheet) {
-                existingSheet.rows = existingSheet.rows.concat(
-                    sheet.rows.toObject(),
-                );
-                return acc;
-            }
-            return acc.concat({
-                sheetName: sheet.sheetName as string,
-                rows: sheet.rows.toObject() as RowData[],
-            });
-        }, []);
-        const sheet = combinedSheets.find((s) => s.sheetName === sheetName);
+        const sheet = files
+            .flatMap((file) => file.sheets)
+            .find((s) => s.sheetName === sheetName);
 
         if (!sheet) {
             res.status(404).send('Sheet not found.');
             return;
         }
-        const [soHieuToBanDo, soThuTuThua] = tamY.split('_');
-
         const rowIndexToUpdate = sheet.rows.findIndex(
-            (row) =>
-                row.get('soHieuToBanDo') == soHieuToBanDo &&
-                row.get('soThuTuThua') == soThuTuThua,
+            (row) => row.get('tamY') === tamY,
         );
 
         if (rowIndexToUpdate === -1) {
