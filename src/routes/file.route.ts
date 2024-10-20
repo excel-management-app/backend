@@ -3,7 +3,6 @@ import multer from 'multer';
 import {
     uploadExcelFile,
     addRowToSheet,
-    deleteRowFromSheet,
     updateRowInSheet,
     getFileData,
     getFiles,
@@ -43,11 +42,6 @@ fileRoute.post(
 
 fileRoute.put('/:fileId/sheets/:sheetName/rows/:rowIndex', updateRowInSheet);
 fileRoute.post('/:fileId/sheets/:sheetName/rows', addRowToSheet);
-
-fileRoute.delete(
-    '/:fileId/sheets/:sheetName/rows/:rowIndex',
-    deleteRowFromSheet,
-);
 
 fileRoute.get('/:rowIndex/downloadWord', exportWord);
 fileRoute.get('/:fileId/downloadManyWord', exportManyWord);

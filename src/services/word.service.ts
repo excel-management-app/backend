@@ -4,7 +4,7 @@ import { Request, Response } from 'express';
 import fs from 'fs';
 import {} from 'lodash';
 import { LocalStorage } from 'node-localstorage';
-import { LOAI_DAT } from "../utils/formFields";
+import { LOAI_DAT } from '../utils/formFields';
 import path from 'path';
 import PizZip from 'pizzip';
 import ExcelFile from '../models/excelFile';
@@ -16,8 +16,8 @@ global.localStorage = new LocalStorage('./scratch');
 
 function getLandDescription(code: string) {
     const description = LOAI_DAT[code.toUpperCase()];
-    return description ? description : "";
-  }
+    return description ? description : '';
+}
 
 // In dữ liệu từ 1 row ra word
 export const exportManytoWord = async (
@@ -50,7 +50,6 @@ export const exportManytoWord = async (
             return;
         }
 
-
         const timestamp = new Date().getTime();
         const zipFileName = `document-${fileId}.zip`;
         const zipFilePath = `${OUTPUT_FILE_PATH}document-${fileId}.zip`; // Đường dẫn để lưu file zip
@@ -77,7 +76,7 @@ export const exportManytoWord = async (
                 accountId,
                 createdAt: { $gte: startOfDay, $lte: endOfDay },
             });
-            console.log("statistic=====",statistic);
+            console.log('statistic=====', statistic);
             if (statistic.length > 0) {
                 await Statistic.findByIdAndUpdate(
                     statistic[0]._id,
@@ -87,7 +86,7 @@ export const exportManytoWord = async (
                     },
                 );
             } else {
-                console.log("accountId=====",accountId);
+                console.log('accountId=====', accountId);
                 await Statistic.create({
                     accountId,
                     count: lstData.length,
@@ -109,28 +108,41 @@ export const exportManytoWord = async (
         // Tạo các file .docx và thêm vào file zip
         lstData.forEach((index: number) => {
             const dataDB = sheet.rows[index];
-            const nameFile = dataDB.get('soHieuToBanDo')+"_"+dataDB.get('soThuTuThua');
+            const nameFile =
+                dataDB.get('soHieuToBanDo') + '_' + dataDB.get('soThuTuThua');
             const type = dataDB.get('loaiDon');
 
-            dataDB.set('gioiTinh', dataDB.get('gioiTinh') == 1 ? "Ông" : "Bà" );
-            dataDB.set('gioiTinh2', dataDB.get('gioiTinh2') == 1 ? "Ông" : "Bà" );
-            dataDB.set('gioiTinhCu', dataDB.get('gioiTinhCu') == 1 ? "Ông" : "Bà" );
-            dataDB.set('gioiTinhCu2', dataDB.get('gioiTinhCu2') == 1 ? "Ông" : "Bà" );
+            dataDB.set('gioiTinh', dataDB.get('gioiTinh') == 1 ? 'Ông' : 'Bà');
+            dataDB.set(
+                'gioiTinh2',
+                dataDB.get('gioiTinh2') == 1 ? 'Ông' : 'Bà',
+            );
+            dataDB.set(
+                'gioiTinhCu',
+                dataDB.get('gioiTinhCu') == 1 ? 'Ông' : 'Bà',
+            );
+            dataDB.set(
+                'gioiTinhCu2',
+                dataDB.get('gioiTinhCu2') == 1 ? 'Ông' : 'Bà',
+            );
 
             const dientichtangthem = Number(dataDB.get('Dientichtangthem'));
-            dataDB.set('Dientichtangthem', parseFloat(dientichtangthem.toFixed(1)) );
+            dataDB.set(
+                'Dientichtangthem',
+                parseFloat(dientichtangthem.toFixed(1)),
+            );
 
-            const loaiDat1: string = dataDB.get('loaiDat1'); 
+            const loaiDat1: string = dataDB.get('loaiDat1');
 
-            dataDB.set('loaiDat1', getLandDescription(loaiDat1) );
+            dataDB.set('loaiDat1', getLandDescription(loaiDat1));
 
-            const loaiDat2 = dataDB.get('loaiDat2'); 
+            const loaiDat2 = dataDB.get('loaiDat2');
             dataDB.set('loaiDat2', getLandDescription(loaiDat2));
 
-            const loaiDatCu1 = dataDB.get('loaiDatCu1'); 
+            const loaiDatCu1 = dataDB.get('loaiDatCu1');
             dataDB.set('loaiDatCu1', getLandDescription(loaiDatCu1));
 
-            const loaiDatCu2 = dataDB.get('loaiDatCu2'); 
+            const loaiDatCu2 = dataDB.get('loaiDatCu2');
             dataDB.set('loaiDatCu2', getLandDescription(loaiDatCu2));
 
             const dataToWord = dataDB.toJSON();
@@ -138,18 +150,25 @@ export const exportManytoWord = async (
             // eslint-disable-next-line no-var
             var content: PizZip.LoadData;
             try {
-                if(type == "Cấp mới") {
-                    pathFileTemplate = global.localStorage.getItem('wordCapMoi') || '';
+                if (type == 'Cấp mới') {
+                    pathFileTemplate =
+                        global.localStorage.getItem('wordCapMoi') || '';
                 } else {
-                    pathFileTemplate = global.localStorage.getItem('wordCapDoi') || '';
+                    pathFileTemplate =
+                        global.localStorage.getItem('wordCapDoi') || '';
                 }
-                
+
                 if (
                     pathFileTemplate == null ||
                     pathFileTemplate == undefined ||
                     pathFileTemplate.trim() == ''
                 ) {
-                    res.status(404).send('Bạn chưa upload file template word mẫu đơn ' + type == "Cấp mới" ? "cấp mới": "cấp đổi");
+                    res.status(404).send(
+                        'Bạn chưa upload file template word mẫu đơn ' + type ==
+                            'Cấp mới'
+                            ? 'cấp mới'
+                            : 'cấp đổi',
+                    );
                     return;
                 }
 
@@ -161,7 +180,7 @@ export const exportManytoWord = async (
                 res.status(404).send('Bạn chưa upload file template word.');
                 return;
             }
-            
+
             const zip = new PizZip(content);
             const doc = new Docxtemplater(zip, {
                 nullGetter: (part) => {
@@ -198,7 +217,6 @@ export const exportManytoWord = async (
     }
 };
 
-
 export const exportOneToWord = async (
     req: Request,
     res: Response,
@@ -228,125 +246,147 @@ export const exportOneToWord = async (
         const timestamp = new Date().getTime();
         const dataExport = sheet.rows[rowIndex];
 
-        
+        const nameFile =
+            dataExport.get('soHieuToBanDo') + dataExport.get('soThuTuThua');
+        const type = dataExport.get('loaiDon');
 
-        const nameFile = dataExport.get('soHieuToBanDo')+dataExport.get('soThuTuThua');
-            const type = dataExport.get('loaiDon');
+        //convert giới tính
+        dataExport.set(
+            'gioiTinh',
+            dataExport.get('gioiTinh') == 1 ? 'Ông' : 'Bà',
+        );
+        dataExport.set(
+            'gioiTinh2',
+            dataExport.get('gioiTinh2') == 1 ? 'Ông' : 'Bà',
+        );
+        dataExport.set(
+            'gioiTinhCu',
+            dataExport.get('gioiTinhCu') == 1 ? 'Ông' : 'Bà',
+        );
+        dataExport.set(
+            'gioiTinhCu2',
+            dataExport.get('gioiTinhCu2') == 1 ? 'Ông' : 'Bà',
+        );
 
-            //convert giới tính
-            dataExport.set('gioiTinh', dataExport.get('gioiTinh') == 1 ? "Ông" : "Bà" );
-            dataExport.set('gioiTinh2', dataExport.get('gioiTinh2') == 1 ? "Ông" : "Bà" );
-            dataExport.set('gioiTinhCu', dataExport.get('gioiTinhCu') == 1 ? "Ông" : "Bà" );
-            dataExport.set('gioiTinhCu2', dataExport.get('gioiTinhCu2') == 1 ? "Ông" : "Bà" );
+        //convert dientichtangthem
+        const dientichtangthem = Number(dataExport.get('Dientichtangthem'));
+        dataExport.set(
+            'Dientichtangthem',
+            parseFloat(dientichtangthem.toFixed(1)),
+        );
 
-            //convert dientichtangthem
-            const dientichtangthem = Number(dataExport.get('Dientichtangthem'));
-            dataExport.set('Dientichtangthem', parseFloat(dientichtangthem.toFixed(1)) );
+        //convert loại đất
+        const loaiDat1: string = dataExport.get('loaiDat1');
 
-            //convert loại đất
-            const loaiDat1: string = dataExport.get('loaiDat1'); 
+        dataExport.set('loaiDat1', getLandDescription(loaiDat1));
 
-            dataExport.set('loaiDat1', getLandDescription(loaiDat1) );
+        const loaiDat2 = dataExport.get('loaiDat2');
+        dataExport.set('loaiDat2', getLandDescription(loaiDat2));
 
-            const loaiDat2 = dataExport.get('loaiDat2'); 
-            dataExport.set('loaiDat2', getLandDescription(loaiDat2));
+        const loaiDatCu1 = dataExport.get('loaiDatCu1');
+        dataExport.set('loaiDatCu1', getLandDescription(loaiDatCu1));
 
-            const loaiDatCu1 = dataExport.get('loaiDatCu1'); 
-            dataExport.set('loaiDatCu1', getLandDescription(loaiDatCu1));
+        const loaiDatCu2 = dataExport.get('loaiDatCu2');
+        dataExport.set('loaiDatCu2', getLandDescription(loaiDatCu2));
 
-            const loaiDatCu2 = dataExport.get('loaiDatCu2'); 
-            dataExport.set('loaiDatCu2', getLandDescription(loaiDatCu2));
+        const dataToWord = dataExport.toJSON();
+        var pathFileTemplate = '';
+        // eslint-disable-next-line no-var
+        var content: PizZip.LoadData;
+        try {
+            if (type == 'Cấp mới') {
+                pathFileTemplate =
+                    global.localStorage.getItem('wordCapMoi') || '';
+            } else {
+                pathFileTemplate =
+                    global.localStorage.getItem('wordCapDoi') || '';
+            }
 
-            const dataToWord = dataExport.toJSON();
-            var pathFileTemplate = '';
-            // eslint-disable-next-line no-var
-            var content: PizZip.LoadData;
-            try {
-                if(type == "Cấp mới") {
-                    pathFileTemplate = global.localStorage.getItem('wordCapMoi') || '';
-                } else {
-                    pathFileTemplate = global.localStorage.getItem('wordCapDoi') || '';
-                }
-                
-                if (
-                    pathFileTemplate == null ||
-                    pathFileTemplate == undefined ||
-                    pathFileTemplate.trim() == ''
-                ) {
-                    res.status(404).send('Bạn chưa upload file template word mẫu đơn ' + type == "Cấp mới" ? "cấp mới": "cấp đổi");
-                    return;
-                }
-
-                content = fs.readFileSync(
-                    path.resolve(__dirname, `../../${pathFileTemplate}`),
-                    'binary',
+            if (
+                pathFileTemplate == null ||
+                pathFileTemplate == undefined ||
+                pathFileTemplate.trim() == ''
+            ) {
+                res.status(404).send(
+                    'Bạn chưa upload file template word mẫu đơn ' + type ==
+                        'Cấp mới'
+                        ? 'cấp mới'
+                        : 'cấp đổi',
                 );
-            } catch (error: any) {
-                res.status(404).send('Bạn chưa upload file template word.');
                 return;
             }
-            
-            const zip = new PizZip(content);
-            const doc = new Docxtemplater(zip, {
-                nullGetter: (part) => {
-                    console.warn(
-                        `Không tìm thấy dữ liệu cho placeholder: ${part.value}`,
-                    );
-                    return ''; // Trả về chuỗi rỗng nếu không tìm thấy dữ liệu
+
+            content = fs.readFileSync(
+                path.resolve(__dirname, `../../${pathFileTemplate}`),
+                'binary',
+            );
+        } catch (error: any) {
+            res.status(404).send('Bạn chưa upload file template word.');
+            return;
+        }
+
+        const zip = new PizZip(content);
+        const doc = new Docxtemplater(zip, {
+            nullGetter: (part) => {
+                console.warn(
+                    `Không tìm thấy dữ liệu cho placeholder: ${part.value}`,
+                );
+                return ''; // Trả về chuỗi rỗng nếu không tìm thấy dữ liệu
+            },
+        });
+
+        doc.setData(dataToWord);
+
+        try {
+            doc.render();
+        } catch (error: any) {
+            console.error('Error generating data to Word: ', error);
+            res.status(500).send(
+                'Error generating data to Word: ' + error.message,
+            );
+            return; // Dừng lại nếu có lỗi trong quá trình render
+        }
+
+        const buf = doc.getZip().generate({ type: 'nodebuffer' });
+        const fileName = `word_file-${rowIndex}.docx`;
+
+        fs.writeFileSync(
+            path.resolve(__dirname, `../files/exports/${fileName}`),
+            buf,
+        );
+
+        const now = new Date();
+
+        // Tạo thời gian bắt đầu của ngày hôm nay (00:00:00)
+        const startOfDay = new Date(now.setHours(0, 0, 0, 0));
+
+        // Tạo thời gian kết thúc của ngày hôm nay (23:59:59.999)
+        const endOfDay = new Date(now.setHours(23, 59, 59, 999));
+
+        const accountId = getAccountIdFromHeader(req);
+        const statistic = await Statistic.find({
+            accountId,
+            createdAt: { $gte: startOfDay, $lte: endOfDay },
+        });
+        console.log('statistic=====', statistic);
+        if (statistic.length > 0) {
+            await Statistic.findByIdAndUpdate(
+                statistic[0]._id,
+                { count: Number(statistic[0]?.count) + 1 },
+                {
+                    new: true,
                 },
-            });
-
-            doc.setData(dataToWord);
-
-            try {
-                doc.render();
-            } catch (error: any) {
-                console.error('Error generating data to Word: ', error);
-                res.status(500).send(
-                    'Error generating data to Word: ' + error.message,
-                );
-                return; // Dừng lại nếu có lỗi trong quá trình render
-            }
-
-            const buf = doc.getZip().generate({ type: 'nodebuffer' });
-            const fileName = `word_file-${rowIndex}.docx`;
-
-            fs.writeFileSync(path.resolve(__dirname,`../files/exports/${fileName}` ), buf);
-
-            const now = new Date();
-
-            // Tạo thời gian bắt đầu của ngày hôm nay (00:00:00)
-            const startOfDay = new Date(now.setHours(0, 0, 0, 0));
-
-            // Tạo thời gian kết thúc của ngày hôm nay (23:59:59.999)
-            const endOfDay = new Date(now.setHours(23, 59, 59, 999));
-
-            const accountId = getAccountIdFromHeader(req);
-            const statistic = await Statistic.find({
+            );
+        } else {
+            console.log('accountId=====', accountId);
+            await Statistic.create({
                 accountId,
-                createdAt: { $gte: startOfDay, $lte: endOfDay },
+                count: 1,
+                createdAt: now,
             });
-            console.log("statistic=====",statistic);
-            if (statistic.length > 0) {
-                await Statistic.findByIdAndUpdate(
-                    statistic[0]._id,
-                    { count: Number(statistic[0]?.count)+1 },
-                    {
-                        new: true,
-                    },
-                );
-            } else {
-                console.log("accountId=====",accountId);
-                await Statistic.create({
-                    accountId,
-                    count: 1,
-                    createdAt: now,
-                });
-            }
+        }
 
-            res.status(200).send('Tạo file thành công: ');
-           
-
+        res.status(200).send('Tạo file thành công: ');
     } catch (error: any) {
         res.status(500).send('Error updating row: ' + error.message);
     }

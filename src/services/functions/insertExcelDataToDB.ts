@@ -8,7 +8,7 @@ import stream from 'stream';
 
 // Adjust these constants based on your needs 1MB
 const CHUNK_SIZE = 1024 * 1024;
-const BATCH_SIZE = 5000; // Adjust based on your needs
+const BATCH_SIZE = 3000; // Adjust based on your needs
 
 export const insertExcelDataToDB = async (filePath: string): Promise<void> => {
     const mongoInstance = MongoDB.getInstance();
@@ -88,9 +88,9 @@ async function processExcelFile(
         });
 
         if (jsonData.length === 0) {
-            console.warn(
-                `Sheet "${sheetName}" is empty or has invalid format. Skipping.`,
-            );
+            // console.warn(
+            //     `Sheet "${sheetName}" is empty or has invalid format. Skipping.`,
+            // );
             continue;
         }
 
@@ -135,9 +135,9 @@ async function processExcelFile(
         throw new Error('No valid data found in the Excel file');
     }
 
-    console.log(
-        `Successfully imported ${totalRowsInserted} rows from ${originalFilePath}`,
-    );
+    // console.log(
+    //     `Successfully imported ${totalRowsInserted} rows from ${originalFilePath}`,
+    // );
 }
 
 function getFileName(filePath: string): string {
