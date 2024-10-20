@@ -302,12 +302,11 @@ export const exportFileBySheet = async (
 };
 
 export const exportWord = (req: Request, res: Response) => {
-    const { rowIndex } = req.params;
-
     try {
-        const filePath = `${OUTPUT_FILE_PATH}word_file-${rowIndex}.docx`;
+        const { tamY } = req.params;
+        const filePath = `${OUTPUT_FILE_PATH}word_file-${tamY}.docx`;
 
-        res.download(filePath, `word_file-${rowIndex}.docx`, (err) => {
+        res.download(filePath, `word_file-${tamY}.docx`, (err) => {
             if (err) {
                 console.error(err);
                 res.status(500).send('Error downloading the file.');

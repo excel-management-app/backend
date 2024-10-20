@@ -30,7 +30,12 @@ export const exportManytoWord = async (
 ): Promise<void> => {
     try {
         const { fileId, sheetName } = req.params;
-        const rowIndex = req.body.data;
+        const listTamY = req.body.data;
+
+        if (!listTamY) {
+            res.status(400).send('No rows selected.');
+            return;
+        }
 
         const sheet = await findSheetToUpdate(fileId, sheetName);
 
@@ -40,20 +45,10 @@ export const exportManytoWord = async (
             return;
         }
 
-        if (rowIndex.length < 1) {
-            res.status(400).send('No row selected.');
-            return;
-        }
-        if (rowIndex < 0) {
-            res.status(400).send('Invalid row index.');
-            return;
-        }
-
-        const timestamp = new Date().getTime();
         const zipFileName = `document-${fileId}.zip`;
         const zipFilePath = `${OUTPUT_FILE_PATH}document-${fileId}.zip`; // Đường dẫn để lưu file zip
 
-        const lstData = rowIndex.split(',').map(Number);
+        const lstData = listTamY.split(',');
 
         // Tạo stream để ghi dữ liệu vào file zip
         const output = fs.createWriteStream(zipFilePath);
@@ -104,8 +99,14 @@ export const exportManytoWord = async (
         archive.pipe(output);
 
         // Tạo các file .docx và thêm vào file zip
-        lstData.forEach((index: number) => {
-            const dataDB = sheet.rows[index];
+
+        lstData.forEach((tamY: string) => {
+            const [soHieuToBanDo, soThuTuThua] = tamY.split('_');
+            const dataDB = sheet.rows.find(
+                (row: any) =>
+                    row.get('soHieuToBanDo') == soHieuToBanDo &&
+                    row.get('soThuTuThua') == soThuTuThua,
+            );
             const nameFile =
                 dataDB.get('soHieuToBanDo') + '_' + dataDB.get('soThuTuThua');
             const type = dataDB.get('loaiDon');
@@ -221,16 +222,27 @@ export const exportOneToWord = async (
     res: Response,
 ): Promise<void> => {
     try {
-        const { fileId, sheetName, rowIndex: rowIndexString } = req.params;
-        const rowIndex = parseInt(rowIndexString);
+        const { fileId, sheetName, tamY } = req.params;
+
         const sheet = await findSheetToUpdate(fileId, sheetName);
 
-        if (rowIndex < 0) {
-            res.status(400).send('Invalid row index.');
+        if (!tamY) {
+            res.status(400).send('No row selected.');
             return;
         }
 
-        const dataExport = sheet.rows[rowIndex];
+        const [soHieuToBanDo, soThuTuThua] = tamY.split('_');
+        const dataExport = sheet.rows.find(
+            (row: any) =>
+                row.get('soHieuToBanDo') == soHieuToBanDo &&
+                row.get('soThuTuThua') == soThuTuThua,
+        );
+
+        if (!dataExport) {
+            console.warn('Row not found.');
+            res.status(400).send('Row not found.');
+            return;
+        }
 
         const type = dataExport.get('loaiDon');
 
@@ -333,7 +345,7 @@ export const exportOneToWord = async (
         }
 
         const buf = doc.getZip().generate({ type: 'nodebuffer' });
-        const fileName = `word_file-${rowIndex}.docx`;
+        const fileName = `word_file-${tamY}.docx`;
 
         fs.writeFileSync(
             path.resolve(__dirname, `../files/exports/${fileName}`),

@@ -1,4 +1,5 @@
 import ExcelFile from '../../models/excelFile';
+import { RowData, Sheet } from '../types';
 import { getGridFsFileById } from './getGridFsFile';
 
 export const findSheetToUpdate = async (fileId: string, sheetName: string) => {
@@ -8,10 +9,26 @@ export const findSheetToUpdate = async (fileId: string, sheetName: string) => {
             throw new Error('File not found');
         }
         const files = await ExcelFile.find({ fileName: gridFsFile.filename });
+        const allFileSheets = files.flatMap((file) => file.sheets);
+        // combine all sheet with the same name from all files
 
-        const sheet = files
-            .flatMap((file) => file.sheets)
-            .find((s) => s.sheetName === sheetName);
+        const sheets = allFileSheets.reduce<any[]>((acc, sheet) => {
+            const existingSheet = acc.find(
+                ({ sheetName }) => sheetName === sheet.sheetName,
+            );
+            if (existingSheet) {
+                existingSheet.rows = existingSheet.rows.concat(
+                    sheet.rows.toObject(),
+                );
+                return acc;
+            }
+            return acc.concat({
+                sheetName: sheet.sheetName as string,
+                rows: sheet.rows.toObject() as RowData[],
+            });
+        }, []);
+
+        const sheet = sheets.find((s) => s.sheetName === sheetName);
 
         if (!sheet) {
             throw new Error('Sheet not found');
