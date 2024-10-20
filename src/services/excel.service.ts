@@ -72,59 +72,129 @@ export const addRowToSheet = async (
     try {
         const { fileId, sheetName } = req.params;
         const newRowData = req.body.data;
-        const accountId = getAccountIdFromHeader(req);
+        const accountId = getAccountIdFromHeader(req); 
         const tamY = `${newRowData.soHieuToBanDo}_${newRowData.soThuTuThua}`;
-        const fileExistsWithSheetAndRow = await ExcelFile.exists({
-            _id: fileId,
-            'sheets.sheetName': sheetName,
-            'sheets.rows': {
-                $elemMatch: {
-                    $or: [
-                        {
-                            $and: Object.entries(newRowData).map(
-                                ([key, value]) => ({
-                                    [key]: value,
-                                }),
-                            ),
-                        },
-                        {
-                            tamY,
-                        },
-                    ],
-                },
-            },
-        });
-        if (fileExistsWithSheetAndRow) {
-            res.status(409).send('Hàng đã tồn tại trong sheet');
+
+        const gridFsFile = await getGridFsFileById(fileId);
+
+        if (!gridFsFile) {
+            res.status(404).send('File not found.');
             return;
         }
-        const file = await ExcelFile.findById(fileId);
-        if (!file) {
+        
+        const files = await ExcelFile.find({ fileName: gridFsFile.filename });
+
+        if (files.length === 0) {
             res.status(404).send('File not found.');
             return;
         }
 
-        const sheet = file.sheets.find((s) => s.sheetName === sheetName);
-        if (!sheet) {
+        // kiểm tra dữ liệu trùng
+        const fileExistsWithSheetAndRow = files.some(file =>
+            file.sheets.some(sheet =>
+                sheet.sheetName === sheetName &&
+                sheet.rows.some(row =>
+                    Object.entries(newRowData).every(([key, value]) => row.get(key) === value) || row.get('tamY') === tamY
+                )
+            )
+        );
+
+        if (fileExistsWithSheetAndRow) {
+            res.status(409).send('Hàng đã tồn tại trong sheet');
+            return;
+        }
+
+        let sheetFound = false;
+        for (const file of files) {
+            const sheet = file.sheets.find((s) => s.sheetName === sheetName);
+            if (sheet) {
+                sheet.rows.push({
+                    ...newRowData,
+                    tamY,
+                    accountId,
+                });
+                sheetFound = true;
+                await file.save(); 
+                break; 
+            }
+        }
+
+        if (!sheetFound) {
             res.status(404).send('Sheet not found.');
             return;
         }
 
-        sheet.rows.push({
-            ...newRowData,
-            tamY,
-            accountId,
-        });
-
-        await file.save();
         res.status(200).json({
             message: 'Row added successfully',
-            rowIndex: sheet.rows.length - 1,
         });
+
     } catch (error: any) {
         res.status(500).send('Error adding row: ' + error.message);
     }
 };
+
+
+// Thêm hàng mới vào một sheet cụ thể
+// export const addRowToSheet = async (
+//     req: Request,
+//     res: Response,
+// ): Promise<void> => {
+//     try {
+//         const { fileId, sheetName } = req.params;
+//         const newRowData = req.body.data;
+//         const accountId = getAccountIdFromHeader(req);
+//         const tamY = `${newRowData.soHieuToBanDo}_${newRowData.soThuTuThua}`;
+//         const fileExistsWithSheetAndRow = await ExcelFile.exists({
+//             _id: fileId,
+//             'sheets.sheetName': sheetName,
+//             'sheets.rows': {
+//                 $elemMatch: {
+//                     $or: [
+//                         {
+//                             $and: Object.entries(newRowData).map(
+//                                 ([key, value]) => ({
+//                                     [key]: value,
+//                                 }),
+//                             ),
+//                         },
+//                         {
+//                             tamY,
+//                         },
+//                     ],
+//                 },
+//             },
+//         });
+//         if (fileExistsWithSheetAndRow) {
+//             res.status(409).send('Hàng đã tồn tại trong sheet');
+//             return;
+//         }
+//         const file = await ExcelFile.findById(fileId);
+//         if (!file) {
+//             res.status(404).send('File not found.');
+//             return;
+//         }
+
+//         const sheet = file.sheets.find((s) => s.sheetName === sheetName);
+//         if (!sheet) {
+//             res.status(404).send('Sheet not found.');
+//             return;
+//         }
+
+//         sheet.rows.push({
+//             ...newRowData,
+//             tamY,
+//             accountId,
+//         });
+
+//         await file.save();
+//         res.status(200).json({
+//             message: 'Row added successfully',
+//             rowIndex: sheet.rows.length - 1,
+//         });
+//     } catch (error: any) {
+//         res.status(500).send('Error adding row: ' + error.message);
+//     }
+// };
 
 // Sửa một hàng trong sheet
 export const updateRowInSheet = async (
@@ -136,34 +206,46 @@ export const updateRowInSheet = async (
         const updatedRow = req.body.data;
         const rowIndex = parseInt(rowIndexString);
         const accountId = getAccountIdFromHeader(req);
-        const file = await ExcelFile.findById(fileId);
-        if (!file) {
+        const gridFsFile = await getGridFsFileById(fileId);
+        const tamY = `${updatedRow.soHieuToBanDo}_${updatedRow.soThuTuThua}`
+
+        if (!gridFsFile) {
             res.status(404).send('File not found.');
+            return;
+        }
+        
+        const files = await ExcelFile.find({ fileName: gridFsFile.filename });
 
+        if (files.length === 0) {
+            res.status(404).send('File not found.');
             return;
         }
 
-        const sheet = file.sheets.find((s) => s.sheetName === sheetName);
-        if (!sheet) {
-            res.status(404).send('Sheet not found.');
+        let sheetFound = false;
+        for (const file of files) {
+            const sheet = file.sheets.find((s) => s.sheetName === sheetName);
+            if (sheet) {
+                if (rowIndex < 0 || rowIndex >= sheet.rows.length) {
+                    res.status(400).send('Invalid row index.');
+                    return;
+                }
 
-            return;
+                 const newRow = {
+                    ...updatedRow,
+                    tamY,
+                    accountId,
+                };
+                
+                sheet.rows[rowIndex] = newRow;
+                console.log("rowIdx====",sheet.rows[rowIndex])
+                console.log("=========");
+                console.log("newRow====",newRow)
+                sheetFound = true;
+
+                await file.save(); 
+                break; 
+            }
         }
-
-        if (rowIndex < 0 || rowIndex >= sheet.rows.length) {
-            res.status(400).send('Invalid row index.');
-            return;
-        }
-
-        const newRow = {
-            ...updatedRow,
-            tamY: `${updatedRow.soHieuToBanDo}_${updatedRow.soThuTuThua}`,
-            accountId,
-        };
-
-        sheet.rows[rowIndex] = newRow;
-
-        await file.updateOne({ $set: { sheets: file.sheets } });
 
         res.status(200).json({
             message: 'Row updated successfully',
@@ -216,7 +298,6 @@ export const getFileData = async (
 ): Promise<void> => {
     try {
         const { fileId } = req.params;
-
         const gridFsFile = await getGridFsFileById(fileId);
 
         // find and combine all sheets of the file into one array of rows
