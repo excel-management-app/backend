@@ -145,10 +145,9 @@ export const updateRowInSheet = async (
     res: Response,
 ): Promise<void> => {
     try {
-        const { fileId, sheetName, rowIndex: rowIndexString } = req.params;
+        const { fileId, sheetName } = req.params;
         const updatedRow = req.body.data;
 
-        const rowIndex = parseInt(rowIndexString);
         const accountId = getAccountIdFromHeader(req);
         const gridFsFile = await getGridFsFileById(fileId);
         const tamY = `${updatedRow.soHieuToBanDo}_${updatedRow.soThuTuThua}`;
@@ -173,9 +172,12 @@ export const updateRowInSheet = async (
             res.status(404).send('Sheet not found.');
             return;
         }
+        const rowIndexToUpdate = sheet.rows.findIndex(
+            (row) => row.get('tamY') === tamY,
+        );
 
-        if (rowIndex < 0) {
-            res.status(400).send('Invalid row index.');
+        if (rowIndexToUpdate === -1) {
+            res.status(404).send('Row not found.');
             return;
         }
 
@@ -185,8 +187,7 @@ export const updateRowInSheet = async (
             accountId,
         };
 
-        sheet.rows[rowIndex] = newRow;
-
+        sheet.rows[rowIndexToUpdate] = newRow;
         const fileToUpdate = files.find((file) =>
             file.sheets.some((sheet) => sheet.sheetName === sheetName),
         );

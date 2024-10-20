@@ -40,7 +40,7 @@ fileRoute.post(
     uploadWordFile,
 );
 
-fileRoute.put('/:fileId/sheets/:sheetName/rows/:rowIndex', updateRowInSheet);
+fileRoute.put('/:fileId/sheets/:sheetName/rows', updateRowInSheet);
 fileRoute.post('/:fileId/sheets/:sheetName/rows', addRowToSheet);
 
 fileRoute.get('/downloadWord/:tamY', exportWord);
