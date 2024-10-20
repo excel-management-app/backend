@@ -1,15 +1,19 @@
+/* eslint-disable sonarjs/cognitive-complexity */
+/* eslint-disable sonarjs/no-unused-collection */
+/* eslint-disable @typescript-eslint/no-floating-promises */
 import archiver from 'archiver';
 import Docxtemplater from 'docxtemplater';
 import { Request, Response } from 'express';
 import fs from 'fs';
 import {} from 'lodash';
 import { LocalStorage } from 'node-localstorage';
-import { LOAI_DAT } from '../utils/formFields';
 import path from 'path';
 import PizZip from 'pizzip';
 import ExcelFile from '../models/excelFile';
 import Statistic from '../models/statistic';
+import { LOAI_DAT } from '../utils/formFields';
 import { OUTPUT_FILE_PATH } from './functions/exportExcelDataFromDB';
+import { findSheetToUpdate } from './functions/findSheetToUpdate';
 import { getAccountIdFromHeader } from './functions/getAccountIdFromHeader';
 
 global.localStorage = new LocalStorage('./scratch');
@@ -24,17 +28,12 @@ export const exportManytoWord = async (
     req: Request,
     res: Response,
 ): Promise<void> => {
-    const { fileId, sheetName } = req.params;
-    const rowIndex = req.body.data;
     try {
-        const file = await ExcelFile.findById(fileId);
-        if (!file) {
-            res.status(400).send('File not found.');
+        const { fileId, sheetName } = req.params;
+        const rowIndex = req.body.data;
 
-            return;
-        }
+        const sheet = await findSheetToUpdate(fileId, sheetName);
 
-        const sheet = file.sheets.find((s) => s.sheetName === sheetName);
         if (!sheet) {
             res.status(400).send('Sheet not found.');
 
@@ -45,7 +44,7 @@ export const exportManytoWord = async (
             res.status(400).send('No row selected.');
             return;
         }
-        if (rowIndex < 0 || rowIndex >= sheet.rows.length) {
+        if (rowIndex < 0) {
             res.status(400).send('Invalid row index.');
             return;
         }
@@ -76,7 +75,7 @@ export const exportManytoWord = async (
                 accountId,
                 createdAt: { $gte: startOfDay, $lte: endOfDay },
             });
-            console.log('statistic=====', statistic);
+
             if (statistic.length > 0) {
                 await Statistic.findByIdAndUpdate(
                     statistic[0]._id,
@@ -86,7 +85,6 @@ export const exportManytoWord = async (
                     },
                 );
             } else {
-                console.log('accountId=====', accountId);
                 await Statistic.create({
                     accountId,
                     count: lstData.length,
@@ -146,6 +144,7 @@ export const exportManytoWord = async (
             dataDB.set('loaiDatCu2', getLandDescription(loaiDatCu2));
 
             const dataToWord = dataDB.toJSON();
+            // eslint-disable-next-line no-var
             var pathFileTemplate = '';
             // eslint-disable-next-line no-var
             var content: PizZip.LoadData;
@@ -221,33 +220,18 @@ export const exportOneToWord = async (
     req: Request,
     res: Response,
 ): Promise<void> => {
-    const { fileId, sheetName, rowIndex: rowIndexString } = req.params;
-    const rowIndex = parseInt(rowIndexString);
-
     try {
-        const file = await ExcelFile.findById(fileId);
-        if (!file) {
-            res.status(404).send('File not found.');
+        const { fileId, sheetName, rowIndex: rowIndexString } = req.params;
+        const rowIndex = parseInt(rowIndexString);
+        const sheet = await findSheetToUpdate(fileId, sheetName);
 
-            return;
-        }
-
-        const sheet = file.sheets.find((s) => s.sheetName === sheetName);
-        if (!sheet) {
-            res.status(404).send('Sheet not found.');
-
-            return;
-        }
-
-        if (rowIndex < 0 || rowIndex >= sheet.rows.length) {
+        if (rowIndex < 0) {
             res.status(400).send('Invalid row index.');
             return;
         }
-        const timestamp = new Date().getTime();
+
         const dataExport = sheet.rows[rowIndex];
 
-        const nameFile =
-            dataExport.get('soHieuToBanDo') + dataExport.get('soThuTuThua');
         const type = dataExport.get('loaiDon');
 
         //convert giới tính
@@ -290,6 +274,7 @@ export const exportOneToWord = async (
         dataExport.set('loaiDatCu2', getLandDescription(loaiDatCu2));
 
         const dataToWord = dataExport.toJSON();
+        // eslint-disable-next-line no-var
         var pathFileTemplate = '';
         // eslint-disable-next-line no-var
         var content: PizZip.LoadData;
@@ -368,7 +353,7 @@ export const exportOneToWord = async (
             accountId,
             createdAt: { $gte: startOfDay, $lte: endOfDay },
         });
-        console.log('statistic=====', statistic);
+
         if (statistic.length > 0) {
             await Statistic.findByIdAndUpdate(
                 statistic[0]._id,
@@ -378,7 +363,6 @@ export const exportOneToWord = async (
                 },
             );
         } else {
-            console.log('accountId=====', accountId);
             await Statistic.create({
                 accountId,
                 count: 1,

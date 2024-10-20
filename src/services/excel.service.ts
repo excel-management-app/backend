@@ -173,7 +173,7 @@ export const updateRowInSheet = async (
             return;
         }
 
-        if (rowIndex < 0 || rowIndex >= sheet.rows.length) {
+        if (rowIndex < 0) {
             res.status(400).send('Invalid row index.');
             return;
         }

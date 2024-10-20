@@ -1,7 +1,7 @@
 import * as ExcelJS from 'exceljs';
-import MongoDB from '../../db';
 import ExcelFile from '../../models/excelFile';
-import { RowData } from '../types';
+import { RowData, Sheet } from '../types';
+import { getGridFsFileById } from './getGridFsFile';
 
 const EXPORT_TEMPLATE_PATH = 'src/files/templates/export_template.xlsx';
 export const OUTPUT_FILE_PATH = 'src/files/exports/';
@@ -13,18 +13,38 @@ export async function exportExcelDataFromDB({
     sheetName: string;
 }) {
     try {
-        const mongoInstance = MongoDB.getInstance();
-        await mongoInstance.connect();
-
-        const fileData = await ExcelFile.findById(fileId).exec();
-        if (!fileData) {
+        const gridFsFile = await getGridFsFileById(fileId);
+        if (!gridFsFile) {
+            throw new Error('File not found');
+        }
+        const files = await ExcelFile.find({ fileName: gridFsFile.filename });
+        if (!files.length) {
             throw new Error('File not found');
         }
 
         const workbook = new ExcelJS.Workbook();
         await workbook.xlsx.readFile(EXPORT_TEMPLATE_PATH);
 
-        const sheetToExport = fileData.sheets.find(
+        const allFileSheets = files.flatMap((file) => file.sheets);
+        // combine all sheet with the same name from all files
+
+        const combinedSheets = allFileSheets.reduce<Sheet[]>((acc, sheet) => {
+            const existingSheet = acc.find(
+                ({ sheetName }) => sheetName === sheet.sheetName,
+            );
+            if (existingSheet) {
+                existingSheet.rows = existingSheet.rows.concat(
+                    sheet.rows.toObject(),
+                );
+                return acc;
+            }
+            return acc.concat({
+                sheetName: sheet.sheetName as string,
+                rows: sheet.rows.toObject() as RowData[],
+            });
+        }, []);
+
+        const sheetToExport = combinedSheets.find(
             (sheet) => sheet.sheetName === sheetName,
         );
         if (!sheetToExport) {
