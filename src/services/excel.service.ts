@@ -223,7 +223,7 @@ export const updateRowInSheet = async (
             res.status(404).send('File not found.');
             return;
         }
-        console.log('fileToUpdate', fileToUpdate);
+
         const newRow = {
             ...updatedRow,
             tamY,
