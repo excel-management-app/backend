@@ -192,7 +192,8 @@ export const updateRowInSheet = async (
             return;
         }
         const rowIndexToUpdate = sheet.rows.findIndex(
-            (row) => row.get('tamY') === tamY,
+            (row) => row.get('tamY') === tamY || 
+            (row.get('soHieuToBanDo') === updatedRow.soHieuToBanDo && row.get('soThuTuThua') === updatedRow.soThuTuThua)
         );
 
         if (rowIndexToUpdate === -1) {
