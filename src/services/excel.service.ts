@@ -10,6 +10,7 @@ import {
 import { getAccountIdFromHeader } from './functions/getAccountIdFromHeader';
 import { getGridFsFileById } from './functions/getGridFsFile';
 import { insertExcelDataToDB } from './functions/insertExcelDataToDB';
+import { RowData, Sheet } from './types';
 
 global.localStorage = new LocalStorage('./scratch');
 
@@ -164,9 +165,27 @@ export const updateRowInSheet = async (
             return;
         }
 
-        const sheet = files
-            .flatMap((file) => file.sheets)
-            .find((s) => s.sheetName === sheetName);
+        const allFileSheets = files.flatMap((file) => file.sheets);
+
+        const combinedSheets = allFileSheets.reduce<Sheet[]>((acc, sheet) => {
+            const existingSheet = acc.find(
+                ({ sheetName }) => sheetName === sheet.sheetName,
+            );
+            if (existingSheet) {
+                existingSheet.rows = existingSheet.rows.concat(
+                    sheet.rows.toObject(),
+                );
+                return acc;
+            }
+            return acc.concat({
+                sheetName: sheet.sheetName as string,
+                rows: sheet.rows.toObject() as RowData[],
+            });
+        }, []);
+
+        const sheet = combinedSheets.find(
+            (s) => s.sheetName === sheetName,
+        ) as Sheet;
 
         if (!sheet) {
             res.status(404).send('Sheet not found.');
