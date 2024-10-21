@@ -68,6 +68,7 @@ export const uploadWordFile = (req: Request, res: Response) => {
 export const addRowToSheet = async (
     req: Request,
     res: Response,
+    // eslint-disable-next-line sonarjs/cognitive-complexity
 ): Promise<void> => {
     try {
         const { fileId, sheetName } = req.params;
@@ -96,10 +97,13 @@ export const addRowToSheet = async (
                     sheet.sheetName === sheetName &&
                     sheet.rows.some(
                         (row) =>
-                            row.get('tamY') === tamY ||
-                            Object.entries(newRowData).every(
-                                ([key, value]) => row.get(key) === value,
-                            ),
+                            Object.entries(newRowData).every(([key, value]) => {
+                                if (row.get(key)) {
+                                    return row.get(key) === value;
+                                } else {
+                                    return false;
+                                }
+                            }) || row.get('tamY') === tamY,
                     ),
             ),
         );
@@ -109,33 +113,31 @@ export const addRowToSheet = async (
             return;
         }
 
-        const sheet = files
-            .flatMap((file) => file.sheets)
-            .find((s) => s.sheetName === sheetName);
+        let sheetFound = false;
+        for (const file of files) {
+            const sheet = file.sheets.find((s) => s.sheetName === sheetName);
+            if (sheet) {
+                sheet.rows.push({
+                    ...newRowData,
+                    tamY,
+                    accountId,
+                });
+                sheetFound = true;
+                await file.save();
+                break;
+            }
+        }
 
-        if (!sheet) {
+        if (!sheetFound) {
             res.status(404).send('Sheet not found.');
             return;
         }
 
-        sheet.rows.push({
-            ...newRowData,
-            tamY,
-            accountId,
-        });
-
-        const fileToUpdate = files.find((file) =>
-            file.sheets.some((sheet) => sheet.sheetName === sheetName),
-        );
-
-        if (fileToUpdate) {
-            await fileToUpdate.save();
-        }
         res.status(200).json({
             message: 'Row added successfully',
-            tamY,
         });
     } catch (error: any) {
+        console.error('Error adding row:', error);
         res.status(500).send('Error adding row: ' + error.message);
     }
 };
@@ -380,5 +382,66 @@ export const exportManyWord = (req: Request, res: Response) => {
     } catch (error) {
         console.error(error);
         res.status(500).send('Error exporting file');
+    }
+};
+
+// get row data by tamY from sheet
+export const getRowData = async (req: Request, res: Response) => {
+    try {
+        const { fileId, sheetName, tamY } = req.params;
+
+        const gridFsFile = await getGridFsFileById(fileId);
+
+        if (!gridFsFile) {
+            res.status(404).send('File not found.');
+            return;
+        }
+
+        const files = await ExcelFile.find({ fileName: gridFsFile.filename });
+
+        if (files.length === 0) {
+            res.status(404).send('File not found.');
+            return;
+        }
+
+        const allFileSheets = files.flatMap((file) => file.sheets);
+
+        const combinedSheets = allFileSheets.reduce<Sheet[]>((acc, sheet) => {
+            const existingSheet = acc.find(
+                ({ sheetName }) => sheetName === sheet.sheetName,
+            );
+            if (existingSheet) {
+                existingSheet.rows = existingSheet.rows.concat(
+                    sheet.rows.toObject(),
+                );
+                return acc;
+            }
+            return acc.concat({
+                sheetName: sheet.sheetName as string,
+                rows: sheet.rows.toObject() as RowData[],
+            });
+        }, []);
+
+        const sheet = combinedSheets.find(
+            (s) => s.sheetName === sheetName,
+        ) as Sheet;
+
+        if (!sheet) {
+            res.status(404).send('Sheet not found.');
+            return;
+        }
+
+        const rowData = sheet.rows.find(
+            (row) => row.get('tamY') === tamY,
+        ) as RowData;
+
+        if (!rowData) {
+            res.status(404).send('Row not found.');
+            return;
+        }
+
+        res.json({ data: rowData });
+    } catch (error: any) {
+        res.status(500).send('Error retrieving row data: ' + error.message);
     }
 };
