@@ -5,6 +5,7 @@ import ExcelFile from '../../models/excelFile';
 import { compact } from 'lodash';
 import fs from 'fs';
 import stream from 'stream';
+import { chunk } from 'lodash';
 
 // Adjust these constants based on your needs 1MB
 const CHUNK_SIZE = 1024 * 1024;
@@ -94,11 +95,12 @@ async function processExcelFile(
             continue;
         }
 
-        const headers = compact(jsonData[0]);
+        const headers = jsonData[0];
 
-        for (let i = 1; i < jsonData.length; i += BATCH_SIZE) {
-            const batchRows = jsonData
-                .slice(i, i + BATCH_SIZE)
+        const batches = chunk(jsonData.slice(1), BATCH_SIZE);
+
+        for (const batch of batches) {
+            const batchRows = batch
                 .filter((row) => row.some((cell) => cell !== ''))
                 .map((row) => {
                     const rowObject: any = {};
