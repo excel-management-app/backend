@@ -192,8 +192,10 @@ export const updateRowInSheet = async (
             return;
         }
         const rowIndexToUpdate = sheet.rows.findIndex(
-            (row) => row.get('tamY') === tamY || 
-            (row.get('soHieuToBanDo') === updatedRow.soHieuToBanDo && row.get('soThuTuThua') === updatedRow.soThuTuThua)
+            (row) =>
+                row.get('tamY') === tamY ||
+                (row.get('soHieuToBanDo') === updatedRow.soHieuToBanDo &&
+                    row.get('soThuTuThua') === updatedRow.soThuTuThua),
         );
 
         if (rowIndexToUpdate === -1) {
@@ -201,21 +203,46 @@ export const updateRowInSheet = async (
             return;
         }
 
+        const fileToUpdate = files.find(
+            (file) =>
+                file.sheets.some(
+                    (innerSheet) => innerSheet.sheetName === sheetName,
+                ) &&
+                file.sheets.some((innerSheet) =>
+                    innerSheet.rows.some(
+                        (row) =>
+                            row.get('tamY') === tamY ||
+                            (row.get('soHieuToBanDo') ===
+                                updatedRow.soHieuToBanDo &&
+                                row.get('soThuTuThua') ===
+                                    updatedRow.soThuTuThua),
+                    ),
+                ),
+        );
+        if (!fileToUpdate) {
+            res.status(404).send('File not found.');
+            return;
+        }
+        console.log('fileToUpdate', fileToUpdate);
         const newRow = {
             ...updatedRow,
             tamY,
             accountId,
         };
-
-        sheet.rows[rowIndexToUpdate] = newRow;
-        const fileToUpdate = files.find((file) =>
-            file.sheets.some((sheet) => sheet.sheetName === sheetName),
+        const sheetToUpdate = fileToUpdate?.sheets.find(
+            (s) => s.sheetName === sheetName,
         );
+        if (!sheetToUpdate) {
+            res.status(404).send('Sheet not found.');
+            return;
+        }
+
+        sheetToUpdate.rows.set(rowIndexToUpdate, newRow);
 
         if (fileToUpdate) {
             await ExcelFile.findOneAndUpdate(
                 { _id: fileToUpdate._id },
-                { $set: { sheets: fileToUpdate.sheets } },
+                { $set: { sheets: sheetToUpdate } },
                 { new: true },
             );
         }
