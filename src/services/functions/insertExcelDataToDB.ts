@@ -105,6 +105,8 @@ async function processExcelFile(
                     headers.forEach((header, index) => {
                         rowObject[header] = row[index];
                     });
+                    // insert tamY to rowObject if it is not exist
+                    rowObject.tamY = `${rowObject.soHieuToBanDo}_${rowObject.soThuTuThua}`;
                     return rowObject;
                 });
 
