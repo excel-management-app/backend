@@ -2,13 +2,10 @@ import MongoDB from '../../db';
 import { GridFSBucket, ObjectId } from 'mongodb';
 import xlsx from 'xlsx';
 import ExcelFile from '../../models/excelFile';
-import { compact } from 'lodash';
 import fs from 'fs';
 import stream from 'stream';
 import { chunk } from 'lodash';
 
-// Adjust these constants based on your needs 1MB
-const CHUNK_SIZE = 1024 * 1024;
 const BATCH_SIZE = 3000; // Adjust based on your needs
 
 export const insertExcelDataToDB = async (filePath: string): Promise<void> => {
@@ -19,7 +16,6 @@ export const insertExcelDataToDB = async (filePath: string): Promise<void> => {
     }
     const bucket = new GridFSBucket(db, {
         bucketName: 'excelFiles',
-        chunkSizeBytes: CHUNK_SIZE,
     });
 
     try {
@@ -89,13 +85,18 @@ async function processExcelFile(
         });
 
         if (jsonData.length === 0) {
-            // console.warn(
-            //     `Sheet "${sheetName}" is empty or has invalid format. Skipping.`,
-            // );
             continue;
         }
 
-        const headers = jsonData[0];
+        const sheetHeaders = jsonData[0];
+
+        // if header is empty, set header tov value of json data [2]
+        const headers = sheetHeaders.map((header, index) => {
+            if (header === '') {
+                return jsonData[2][index];
+            }
+            return header;
+        });
 
         const batches = chunk(jsonData.slice(1), BATCH_SIZE);
 
@@ -123,7 +124,6 @@ async function processExcelFile(
                             rows: batchRows,
                         },
                     ],
-                    fileId: fileId,
                 });
 
                 await batchExcelFile.save();
@@ -138,10 +138,6 @@ async function processExcelFile(
     if (totalRowsInserted === 0) {
         throw new Error('No valid data found in the Excel file');
     }
-
-    // console.log(
-    //     `Successfully imported ${totalRowsInserted} rows from ${originalFilePath}`,
-    // );
 }
 
 function getFileName(filePath: string): string {

@@ -22,6 +22,7 @@ const excelFileSchema = new mongoose.Schema({
     fileName: { type: String, required: true },
     uploadedAt: { type: Date, default: Date.now },
     sheets: [sheetSchema],
+    gridFSId: mongoose.Schema.Types.ObjectId,
 });
 
 const ExcelFile = mongoose.model('ExcelFile', excelFileSchema);

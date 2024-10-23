@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Request, Response } from 'express';
 import { GridFSBucket } from 'mongodb';
 import { LocalStorage } from 'node-localstorage';
@@ -10,7 +11,8 @@ import {
 import { getAccountIdFromHeader } from './functions/getAccountIdFromHeader';
 import { getGridFsFileById } from './functions/getGridFsFile';
 import { insertExcelDataToDB } from './functions/insertExcelDataToDB';
-import { RowData, Sheet } from './types';
+import { getFileDataByFileId } from './functions/getFileDataByFileId';
+import { checkRowExist } from './functions/checkRowExist';
 
 global.localStorage = new LocalStorage('./scratch');
 
@@ -75,34 +77,27 @@ export const addRowToSheet = async (
         const accountId = getAccountIdFromHeader(req);
         const tamY = `${newRowData.soHieuToBanDo}_${newRowData.soThuTuThua}`;
 
-        const gridFsFile = await getGridFsFileById(fileId);
+        const files = await getFileDataByFileId(fileId);
 
-        if (!gridFsFile) {
-            res.status(404).send('File not found.');
-            return;
-        }
-
-        const files = await ExcelFile.find({ fileName: gridFsFile.filename });
-
-        if (files.length === 0) {
+        if (files?.length === 0 || !files) {
             res.status(404).send('File not found.');
             return;
         }
 
         // kiểm tra dữ liệu trùng
-        const fileExistsWithSheetAndRow = files.some((file) =>
-            file.sheets.some(
-                (sheet) =>
-                    sheet.sheetName === sheetName &&
-                    sheet.rows.some(
-                        (row) =>
-                            row.get('tamY') === tamY ||
-                            Object.entries(newRowData).every(
-                                ([key, value]) => row.get(key) === value,
-                            ),
+        const fileExistsWithSheetAndRow = files.some((file) => {
+            const sheet = file.sheets.find((s) => s.sheetName === sheetName);
+            if (!sheet) {
+                return false;
+            }
+            return sheet.rows.some(
+                (row) =>
+                    row.get('tamY') === tamY ||
+                    Object.entries(newRowData).every(
+                        ([key, value]) => row.get(key) === value,
                     ),
-            ),
-        );
+            );
+        });
 
         if (fileExistsWithSheetAndRow) {
             res.status(409).send('Hàng đã tồn tại trong sheet');
@@ -148,79 +143,22 @@ export const updateRowInSheet = async (
     try {
         const { fileId, sheetName } = req.params;
         const updatedRow = req.body.data;
-
         const accountId = getAccountIdFromHeader(req);
-        const gridFsFile = await getGridFsFileById(fileId);
         const tamY = `${updatedRow.soHieuToBanDo}_${updatedRow.soThuTuThua}`;
 
-        if (!gridFsFile) {
+        const files = await getFileDataByFileId(fileId);
+
+        if (!files || files.length === 0) {
             res.status(404).send('File not found.');
             return;
         }
 
-        const files = await ExcelFile.find({ fileName: gridFsFile.filename });
-
-        if (files.length === 0) {
-            res.status(404).send('File not found.');
-            return;
-        }
-
-        const allFileSheets = files.flatMap((file) => file.sheets);
-
-        const combinedSheets = allFileSheets.reduce<Sheet[]>((acc, sheet) => {
-            const existingSheet = acc.find(
-                ({ sheetName }) => sheetName === sheet.sheetName,
-            );
-            if (existingSheet) {
-                existingSheet.rows = existingSheet.rows.concat(
-                    sheet.rows.toObject(),
-                );
-                return acc;
-            }
-            return acc.concat({
-                sheetName: sheet.sheetName as string,
-                rows: sheet.rows.toObject() as RowData[],
-            });
-        }, []);
-
-        const sheet = combinedSheets.find(
-            (s) => s.sheetName === sheetName,
-        ) as Sheet;
-
-        if (!sheet) {
-            res.status(404).send('Sheet not found.');
-            return;
-        }
-        const rowIndexToUpdate = sheet.rows.findIndex(
-            (row) =>
-                row.get('tamY') === tamY ||
-                (row.get('soHieuToBanDo') === updatedRow.soHieuToBanDo &&
-                    row.get('soThuTuThua') === updatedRow.soThuTuThua),
+        const { fileToUpdate, sheetToUpdate, rowIndexToUpdate } = checkRowExist(
+            { files, sheetName, tamY },
         );
 
-        if (rowIndexToUpdate === -1) {
+        if (!fileToUpdate || !sheetToUpdate || rowIndexToUpdate === -1) {
             res.status(404).send('Row not found.');
-            return;
-        }
-
-        const fileToUpdate = files.find(
-            (file) =>
-                file.sheets.some(
-                    (innerSheet) => innerSheet.sheetName === sheetName,
-                ) &&
-                file.sheets.some((innerSheet) =>
-                    innerSheet.rows.some(
-                        (row) =>
-                            row.get('tamY') === tamY ||
-                            (row.get('soHieuToBanDo') ===
-                                updatedRow.soHieuToBanDo &&
-                                row.get('soThuTuThua') ===
-                                    updatedRow.soThuTuThua),
-                    ),
-                ),
-        );
-        if (!fileToUpdate) {
-            res.status(404).send('File not found.');
             return;
         }
 
@@ -229,24 +167,15 @@ export const updateRowInSheet = async (
             tamY,
             accountId,
         };
-        const sheetToUpdate = fileToUpdate?.sheets.find(
-            (s) => s.sheetName === sheetName,
-        );
-        if (!sheetToUpdate) {
-            res.status(404).send('Sheet not found.');
-            return;
-        }
 
         sheetToUpdate.rows.set(rowIndexToUpdate, newRow);
 
-        if (fileToUpdate) {
-            await ExcelFile.findOneAndUpdate(
-                { _id: fileToUpdate._id },
-                { $set: { sheets: sheetToUpdate } },
-                { new: true },
-            );
-        }
-
+        // Use findOneAndUpdate to update only the necessary parts of the document
+        await ExcelFile.findOneAndUpdate(
+            { _id: fileToUpdate._id, 'sheets.sheetName': sheetName },
+            { $set: { 'sheets.$.rows': sheetToUpdate.rows } },
+            { new: true },
+        );
         res.status(200).json({
             message: 'Row updated successfully',
         });
@@ -254,7 +183,6 @@ export const updateRowInSheet = async (
         res.status(500).send('Error updating row: ' + error.message);
     }
 };
-
 export const getFileData = async (
     req: Request,
     res: Response,
@@ -276,7 +204,11 @@ export const getFileData = async (
             uploadedAt: firstFile.uploadedAt,
             sheets: files.reduce(
                 (
-                    acc: { sheetName: string; headers: any; rows: any[] }[],
+                    acc: {
+                        sheetName: string;
+                        headers: string[];
+                        rows: any[];
+                    }[],
                     file,
                 ) => {
                     file.sheets.forEach((sheet) => {
@@ -288,7 +220,7 @@ export const getFileData = async (
                         } else {
                             acc.push({
                                 sheetName: sheet.sheetName as string,
-                                headers: sheet.headers,
+                                headers: sheet.headers as string[],
                                 rows: sheet.rows,
                             });
                         }
