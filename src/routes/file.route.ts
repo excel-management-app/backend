@@ -10,6 +10,7 @@ import {
     exportManyWord,
     uploadWordFile,
     exportFileBySheet,
+    getFileDataBySheetNameAndTamY,
 } from '../services/excel.service';
 import { checkAdminMiddleware } from '../middlewares/isAdmin';
 
@@ -40,6 +41,10 @@ fileRoute.post(
     uploadWordFile,
 );
 
+fileRoute.get(
+    '/:fileId/sheets/:sheetName/rows/:tamY',
+    getFileDataBySheetNameAndTamY,
+);
 fileRoute.put('/:fileId/sheets/:sheetName/rows', updateRowInSheet);
 fileRoute.post('/:fileId/sheets/:sheetName/rows', addRowToSheet);
 

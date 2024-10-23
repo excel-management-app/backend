@@ -189,11 +189,8 @@ export const getFileData = async (
 ): Promise<void> => {
     try {
         const { fileId } = req.params;
-        const gridFsFile = await getGridFsFileById(fileId);
 
-        // find and combine all sheets of the file into one array of rows
-        // find base on gridFSId
-        const files = await ExcelFile.find({ fileName: gridFsFile.filename });
+        const files = await getFileDataByFileId(fileId);
         const firstFile = files[0];
 
         // combine data to result with baseFileInfo and sheets data from files
@@ -312,5 +309,47 @@ export const exportManyWord = (req: Request, res: Response) => {
     } catch (error) {
         console.error(error);
         res.status(500).send('Error exporting file');
+    }
+};
+
+// get row data by fileId, sheetName, tamY
+export const getFileDataBySheetNameAndTamY = async (
+    req: Request,
+    res: Response,
+): Promise<void> => {
+    try {
+        const { fileId, sheetName, tamY } = req.params;
+
+        const files = await getFileDataByFileId(fileId);
+
+        if (!files || files.length === 0) {
+            res.status(404).send('File not found.');
+            return;
+        }
+        let row = null;
+        for (const file of files) {
+            for (const sheet of file.sheets) {
+                if (sheet.sheetName === sheetName) {
+                    row = sheet.rows.find(
+                        (r) =>
+                            r.get('tamY') === tamY ||
+                            `${r.get('soHieuToBanDo')}_${r.get('soThuTuThua')}` ===
+                                tamY,
+                    );
+                    break;
+                }
+            }
+            if (row) {
+                break;
+            }
+        }
+        if (!row) {
+            res.status(404).send('Row not found.');
+            return;
+        }
+        res.json({ data: row });
+    } catch (error: any) {
+        console.error('Error retrieving row data:', error);
+        res.status(500).send('Error retrieving row data: ' + error.message);
     }
 };
