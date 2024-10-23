@@ -2,8 +2,6 @@ import express from 'express';
 import multer from 'multer';
 import {
     uploadExcelFile,
-    addRowToSheet,
-    updateRowInSheet,
     getFileData,
     getFiles,
     exportWord,
@@ -11,7 +9,8 @@ import {
     uploadWordFile,
     exportFileBySheet,
     getFileDataBySheetNameAndTamY,
-} from '../services/excel.service';
+    updateOrAddRowInSheet,
+} from '../services/file.service';
 import { checkAdminMiddleware } from '../middlewares/isAdmin';
 
 const storage = multer.diskStorage({
@@ -45,8 +44,7 @@ fileRoute.get(
     '/:fileId/sheets/:sheetName/rows/:tamY',
     getFileDataBySheetNameAndTamY,
 );
-fileRoute.put('/:fileId/sheets/:sheetName/rows', updateRowInSheet);
-fileRoute.post('/:fileId/sheets/:sheetName/rows', addRowToSheet);
+fileRoute.post('/:fileId/sheets/:sheetName/rows', updateOrAddRowInSheet);
 
 fileRoute.get('/downloadWord/:tamY', exportWord);
 fileRoute.get('/:fileId/downloadManyWord', exportManyWord);
