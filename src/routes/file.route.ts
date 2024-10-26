@@ -10,6 +10,8 @@ import {
     exportFileBySheet,
     getFileDataBySheetNameAndTamY,
     updateOrAddRowInSheet,
+    uploadMapFile,
+    exportMap,
 } from '../services/file.service';
 import { checkAdminMiddleware } from '../middlewares/isAdmin';
 
@@ -40,6 +42,14 @@ fileRoute.post(
     uploadWordFile,
 );
 
+fileRoute.post(
+    '/uploadTemplateMapFile',
+    checkAdminMiddleware,
+    upload.single('file'),
+    uploadMapFile,
+);
+
+
 fileRoute.get(
     '/:fileId/sheets/:sheetName/rows/:tamY',
     getFileDataBySheetNameAndTamY,
@@ -47,6 +57,7 @@ fileRoute.get(
 fileRoute.post('/:fileId/sheets/:sheetName/rows', updateOrAddRowInSheet);
 
 fileRoute.get('/downloadWord/:tamY', exportWord);
+fileRoute.get('/downloadMap', exportMap);
 fileRoute.get('/:fileId/downloadManyWord', exportManyWord);
 fileRoute.get('/:fileId/sheets/:sheetName/export', exportFileBySheet);
 fileRoute.get('/:fileId/downloadWord', exportWord);

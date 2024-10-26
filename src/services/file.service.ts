@@ -65,6 +65,28 @@ export const uploadWordFile = (req: Request, res: Response) => {
     }
 };
 
+export const uploadMapFile = (req: Request, res: Response) => {
+    try {
+        if (!req.file) {
+            res.status(400).send('No file uploaded.');
+            return;
+        }
+
+        const filePath = req.file.path;
+
+        global.localStorage.setItem('templateMapFile', filePath);
+       
+        // Insert the Excel file into the database
+        res.status(200).send({
+            message: 'File successfully uploaded File.',
+            filePath: filePath,
+        });
+    } catch (error) {
+        console.error('Error processing the file:', error);
+        res.status(500).send('Failed to process the file.');
+    }
+};
+
 export const getFileData = async (
     req: Request,
     res: Response,
@@ -172,6 +194,40 @@ export const exportWord = (req: Request, res: Response) => {
                 res.status(500).send('Error downloading the file.');
             }
         });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error exporting file');
+    }
+};
+
+export const exportMap = (req: Request, res: Response) => {
+    try {
+        let filePath: string = `src/files/templates/`;
+        const fullName = localStorage.getItem("templateMapFile");
+        if (fullName?.trim() !== "") {
+            console.log("fullName=====", fullName);
+            
+            // Sử dụng regex phù hợp với dấu `\\` hoặc `/` để bắt tên file
+            const nameFile = fullName?.match(/templates[\\/](.+)/);
+            
+            if (nameFile && nameFile[1]) {
+                filePath = `${filePath}${nameFile[1]}`;
+                
+                res.download(filePath, nameFile[1], (err: Error) => {
+                    if (err) {
+                        console.error(err);
+                        res.status(500).send('Error downloading the file.');
+                    }
+                });
+            } else {
+                console.error("File name not found in path.");
+                res.status(404).send("Không tìm thấy đường dẫn file lưu bản đồ");
+            }
+        } else {
+            console.error("No template file specified.");
+            res.status(404).send("Bạn chưa tải lên file bản đồ");
+        }
+       
     } catch (error) {
         console.error(error);
         res.status(500).send('Error exporting file');
