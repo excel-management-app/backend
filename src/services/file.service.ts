@@ -10,7 +10,10 @@ import {
 } from './functions/exportExcelDataFromDB';
 import { getAccountIdFromHeader } from './functions/getAccountIdFromHeader';
 import { insertExcelDataToDB } from './functions/insertExcelDataToDB';
-import { getFileDataByFileId } from './functions/getFileDataByFileId';
+import {
+    getFileDataByFileId,
+    getRowDataByFileId,
+} from './functions/getFileDataByFileId';
 import { checkRowExist } from './functions/checkRowExist';
 
 global.localStorage = new LocalStorage('./scratch');
@@ -75,7 +78,7 @@ export const uploadMapFile = (req: Request, res: Response) => {
         const filePath = req.file.path;
 
         global.localStorage.setItem('templateMapFile', filePath);
-       
+
         // Insert the Excel file into the database
         res.status(200).send({
             message: 'File successfully uploaded File.',
@@ -203,16 +206,14 @@ export const exportWord = (req: Request, res: Response) => {
 export const exportMap = (req: Request, res: Response) => {
     try {
         let filePath: string = `src/files/templates/`;
-        const fullName = localStorage.getItem("templateMapFile");
-        if (fullName?.trim() !== "") {
-            console.log("fullName=====", fullName);
-            
+        const fullName = localStorage.getItem('templateMapFile');
+        if (fullName?.trim() !== '') {
             // Sử dụng regex phù hợp với dấu `\\` hoặc `/` để bắt tên file
             const nameFile = fullName?.match(/templates[\\/](.+)/);
-            
+
             if (nameFile && nameFile[1]) {
                 filePath = `${filePath}${nameFile[1]}`;
-                
+
                 res.download(filePath, nameFile[1], (err: Error) => {
                     if (err) {
                         console.error(err);
@@ -220,14 +221,15 @@ export const exportMap = (req: Request, res: Response) => {
                     }
                 });
             } else {
-                console.error("File name not found in path.");
-                res.status(404).send("Không tìm thấy đường dẫn file lưu bản đồ");
+                console.error('File name not found in path.');
+                res.status(404).send(
+                    'Không tìm thấy đường dẫn file lưu bản đồ',
+                );
             }
         } else {
-            console.error("No template file specified.");
-            res.status(404).send("Bạn chưa tải lên file bản đồ");
+            console.error('No template file specified.');
+            res.status(404).send('Bạn chưa tải lên file bản đồ');
         }
-       
     } catch (error) {
         console.error(error);
         res.status(500).send('Error exporting file');
@@ -264,23 +266,24 @@ export const getFileDataBySheetNameAndTamY = async (
             res.status(404).send('File not found.');
             return;
         }
-        let row = null;
-        for (const file of files) {
-            for (const sheet of file.sheets) {
-                if (sheet.sheetName === sheetName) {
-                    row = sheet.rows.find(
-                        (r) =>
-                            r.get('tamY') === tamY ||
-                            `${r.get('soHieuToBanDo')}_${r.get('soThuTuThua')}` ===
-                                tamY,
-                    );
-                    break;
-                }
-            }
-            if (row) {
-                break;
-            }
-        }
+
+        // let row = null;
+        // for (const file of files) {
+        //     const sheet = file.sheets.find(
+        //         (s: any) => s.sheetName === sheetName,
+        //     );
+        //     if (sheet) {
+        //         row = sheet.rows.find(
+        //             (r: any) =>
+        //                 r.tamY === tamY ||
+        //                 `${r.soHieuToBanDo}_${r.soThuTuThua}` === tamY,
+        //         );
+        //         if (row) {
+        //             break;
+        //         }
+        //     }
+        // }
+        const row = await getRowDataByFileId(fileId, sheetName, tamY);
         if (!row) {
             res.status(404).send('Row not found.');
             return;
@@ -321,7 +324,8 @@ export const updateOrAddRowInSheet = async (
                 tamY,
                 accountId,
             };
-            sheetToUpdate.rows.set(rowIndexToUpdate, newRow);
+
+            sheetToUpdate.rows[rowIndexToUpdate] = newRow;
 
             await ExcelFile.findOneAndUpdate(
                 { _id: fileToUpdate._id, 'sheets.sheetName': sheetName },
@@ -353,7 +357,10 @@ export const updateOrAddRowInSheet = async (
             );
 
             if (fileToUpdate) {
-                await fileToUpdate.save();
+                await ExcelFile.findByIdAndUpdate(
+                    fileToUpdate._id,
+                    fileToUpdate,
+                );
             }
             res.status(200).json({
                 message: 'Row added successfully',
