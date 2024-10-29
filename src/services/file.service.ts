@@ -10,10 +10,7 @@ import {
 } from './functions/exportExcelDataFromDB';
 import { getAccountIdFromHeader } from './functions/getAccountIdFromHeader';
 import { insertExcelDataToDB } from './functions/insertExcelDataToDB';
-import {
-    getFileDataByFileId,
-    getRowDataByFileId,
-} from './functions/getFileDataByFileId';
+import { getFileDataByFileId } from './functions/getFileDataByFileId';
 import { checkRowExist } from './functions/checkRowExist';
 
 global.localStorage = new LocalStorage('./scratch');
@@ -267,23 +264,23 @@ export const getFileDataBySheetNameAndTamY = async (
             return;
         }
 
-        // let row = null;
-        // for (const file of files) {
-        //     const sheet = file.sheets.find(
-        //         (s: any) => s.sheetName === sheetName,
-        //     );
-        //     if (sheet) {
-        //         row = sheet.rows.find(
-        //             (r: any) =>
-        //                 r.tamY === tamY ||
-        //                 `${r.soHieuToBanDo}_${r.soThuTuThua}` === tamY,
-        //         );
-        //         if (row) {
-        //             break;
-        //         }
-        //     }
-        // }
-        const row = await getRowDataByFileId(fileId, sheetName, tamY);
+        let row = null;
+        for (const file of files) {
+            const sheet = file.sheets.find(
+                (s: any) => s.sheetName === sheetName,
+            );
+            if (sheet) {
+                row = sheet.rows.find(
+                    (r: any) =>
+                        r.tamY === tamY ||
+                        `${r.soHieuToBanDo}_${r.soThuTuThua}` === tamY,
+                );
+                if (row) {
+                    break;
+                }
+            }
+        }
+
         if (!row) {
             res.status(404).send('Row not found.');
             return;
@@ -316,14 +313,13 @@ export const updateOrAddRowInSheet = async (
         const { fileToUpdate, sheetToUpdate, rowIndexToUpdate } = checkRowExist(
             { files, sheetName, tamY },
         );
-
+        const newRow = {
+            ...rowData,
+            tamY,
+            accountId,
+        };
         if (fileToUpdate && sheetToUpdate && rowIndexToUpdate !== -1) {
             // Update existing row
-            const newRow = {
-                ...rowData,
-                tamY,
-                accountId,
-            };
 
             sheetToUpdate.rows[rowIndexToUpdate] = newRow;
 
@@ -357,9 +353,10 @@ export const updateOrAddRowInSheet = async (
             );
 
             if (fileToUpdate) {
-                await ExcelFile.findByIdAndUpdate(
-                    fileToUpdate._id,
-                    fileToUpdate,
+                await ExcelFile.findOneAndUpdate(
+                    { _id: fileToUpdate._id, 'sheets.sheetName': sheetName },
+                    { $push: { 'sheets.$.rows': newRow } },
+                    { new: true },
                 );
             }
             res.status(200).json({
