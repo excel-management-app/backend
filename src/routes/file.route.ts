@@ -49,7 +49,6 @@ fileRoute.post(
     uploadMapFile,
 );
 
-
 fileRoute.get(
     '/:fileId/sheets/:sheetName/rows/:tamY',
     getFileDataBySheetNameAndTamY,

@@ -18,9 +18,8 @@ export function checkRowExist({ files, sheetName, tamY }: Props) {
             if (sheet.sheetName === sheetName) {
                 const rowIndex = sheet.rows.findIndex(
                     (row: any) =>
-                        row.get('tamY') === tamY ||
-                        `${row.get('soHieuToBanDo')}_${row.get('soThuTuThua')}` ===
-                            tamY,
+                        row.tamY === tamY ||
+                        `${row.soHieuToBanDo}_${row.soThuTuThua}` === tamY,
                 );
 
                 if (rowIndex !== -1) {
