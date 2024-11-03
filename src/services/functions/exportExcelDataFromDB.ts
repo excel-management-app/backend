@@ -4,7 +4,7 @@ import { RowData, Sheet } from '../types';
 import { getGridFsFileById } from './getGridFsFile';
 
 const EXPORT_TEMPLATE_PATH = 'src/files/templates/export_template.xlsx';
-export const OUTPUT_FILE_PATH = 'src/files/exports/';
+export const OUTPUT_FILE_PATH = process.env.OUTPUT_FILE_PATH || 'src/files/exports/';
 export async function exportExcelDataFromDB({
     fileId,
     sheetName,
