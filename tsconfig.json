@@ -6,6 +6,10 @@
         "forceConsistentCasingInFileNames": true,
         "strict": true,
         "outDir": "./dist",
-        "baseUrl": "./src"
-    }
+        "baseUrl": "./src",
+        "rootDir": "./src",
+        "skipLibCheck": true
+    },
+    "include": ["src/**/*", "scratch/**/*"],
+    "exclude": ["node_modules", "dist"]
 }
