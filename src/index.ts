@@ -3,7 +3,6 @@ import compression from 'compression';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
-import fs from 'fs';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import cron from 'node-cron';

@@ -12,6 +12,8 @@ import { getAccountIdFromHeader } from './functions/getAccountIdFromHeader';
 import { insertExcelDataToDB } from './functions/insertExcelDataToDB';
 import { getFileDataByFileId } from './functions/getFileDataByFileId';
 import { checkRowExist } from './functions/checkRowExist';
+import { uploadS3File } from '../s3/uploadS3File';
+import fs from 'fs';
 
 global.localStorage = new LocalStorage('./scratch');
 
@@ -20,12 +22,22 @@ export const uploadExcelFile = async (
     res: Response,
 ): Promise<void> => {
     try {
+        // get file from request without multer
+        console.log(req.res);
         if (!req.file) {
             res.status(400).send('No file uploaded.');
             return;
         }
 
         const filePath = req.file.path;
+
+        const fileToUpload = fs.readFileSync(filePath);
+
+        const result = await uploadS3File({
+            s3Path: req.file.filename,
+            body: fileToUpload,
+            cache: true,
+        });
 
         // Insert the Excel file into the database
         await insertExcelDataToDB(filePath);

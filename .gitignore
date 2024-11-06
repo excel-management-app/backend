@@ -27,5 +27,6 @@ scratch/wordCapMoi
 src/files/exports/
 src/files/templates/
 
-# env
-.env
+# env 
+
+*.env
