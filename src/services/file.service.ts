@@ -9,11 +9,11 @@ import {
     OUTPUT_FILE_PATH,
 } from './functions/exportExcelDataFromDB';
 import { getAccountIdFromHeader } from './functions/getAccountIdFromHeader';
-import { insertExcelDataToDB } from './functions/insertExcelDataToDB';
 import { getFileDataByFileId } from './functions/getFileDataByFileId';
 import { checkRowExist } from './functions/checkRowExist';
 import { uploadS3File } from '../s3/uploadS3File';
 import fs from 'fs';
+import OriginFile from '../models/originFile';
 
 global.localStorage = new LocalStorage('./scratch');
 
@@ -22,8 +22,6 @@ export const uploadExcelFile = async (
     res: Response,
 ): Promise<void> => {
     try {
-        // get file from request without multer
-        console.log(req.res);
         if (!req.file) {
             res.status(400).send('No file uploaded.');
             return;
@@ -33,14 +31,15 @@ export const uploadExcelFile = async (
 
         const fileToUpload = fs.readFileSync(filePath);
 
-        const result = await uploadS3File({
+        const { fileUrl } = await uploadS3File({
             s3Path: req.file.filename,
             body: fileToUpload,
             cache: true,
         });
-
-        // Insert the Excel file into the database
-        await insertExcelDataToDB(filePath);
+        await OriginFile.create({
+            s3Path: fileUrl,
+            fileName: req.file.filename,
+        });
 
         res.status(200).send('File successfully processed and data inserted.');
     } catch (error) {
