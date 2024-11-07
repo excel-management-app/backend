@@ -12,7 +12,6 @@ import {
     OUTPUT_FILE_PATH,
 } from './functions/exportExcelDataFromDB';
 import { getAccountIdFromHeader } from './functions/getAccountIdFromHeader';
-import { getFileDataByFileId } from './functions/getFileDataByFileId';
 import { getFileName } from './functions/insertExcelDataToDB';
 
 global.localStorage = new LocalStorage('./scratch');
@@ -323,49 +322,48 @@ export const getFileDataBySheetNameAndTamY = async (
                 );
             }
         } else {
-            const originFile = await OriginFile.findById(fileId);
-            // get file from s3
-            if (!originFile || !originFile.s3Path) {
-                res.status(404).send('File not found.');
-                return;
-            }
-            const file = await getS3File(originFile.s3Path);
-            const wb = xlsx.read(file, { type: 'buffer' });
-            const worksheet = wb.Sheets[sheetName];
-            const jsonData: any[][] = xlsx.utils.sheet_to_json(worksheet, {
-                header: 1,
-                defval: '',
-                blankrows: false,
-            });
-
-            if (jsonData.length === 0) {
-                res.status(404).send('Sheet not found.');
-                return;
-            }
-
-            const sheetHeaders: string[] = jsonData[0];
-            // if header is empty, set header tov value of json data [2]
-            const headers = sheetHeaders.map((header, index) => {
-                if (header === '') {
-                    return jsonData[2][index];
-                }
-                return header;
-            });
-            const rows = jsonData.slice(1);
-            const rowObject: any = {};
-            const rowFromJson = rows.find(
-                (r: any) =>
-                    r[headers.indexOf('tamY')] === tamY ||
-                    `${r[headers.indexOf('soHieuToBanDo')]}_${r[headers.indexOf('soThuTuThua')]}` ===
-                        tamY,
+            const jsonData: any[][] = await getJsonFileDataByFileIdFromS3(
+                fileId,
+                sheetName,
             );
+
+            if (!jsonData || jsonData.length < 3) {
+                res.status(400).send('Invalid or missing data.');
+                return;
+            }
+
+            const sheetHeaders = jsonData[0].map(
+                (header, index) => header || jsonData[2][index],
+            );
+            const rows = jsonData.slice(1);
+
+            const headerIndexMap = sheetHeaders.reduce(
+                (map, header, index) => {
+                    map[header] = index;
+                    return map;
+                },
+                {} as Record<string, number>,
+            );
+
+            const rowFromJson = rows.find((row) => {
+                const tamYValue = row[headerIndexMap['tamY']];
+                const combinedValue = `${row[headerIndexMap['soHieuToBanDo']]}_${row[headerIndexMap['soThuTuThua']]}`;
+                return tamYValue === tamY || combinedValue === tamY;
+            });
+
             if (!rowFromJson) {
                 res.status(404).send('Row not found.');
                 return;
             }
-            headers.forEach((header, index) => {
-                rowObject[header] = rowFromJson[index];
-            });
+
+            const rowObject = sheetHeaders.reduce(
+                (obj, header, index) => {
+                    obj[header] = rowFromJson[index];
+                    return obj;
+                },
+                {} as Record<string, any>,
+            );
+
             rowObject.tamY = `${rowObject.soHieuToBanDo}_${rowObject.soThuTuThua}`;
             row = rowObject;
         }
@@ -409,3 +407,28 @@ export const updateOrAddRowInSheet = async (
         res.status(500).send('Error updating or adding row: ' + error.message);
     }
 };
+
+async function getJsonFileDataByFileIdFromS3(
+    fileId: string,
+    sheetName: string,
+) {
+    const originFile = await OriginFile.findById(fileId);
+    // get file from s3
+    if (!originFile || !originFile.s3Path) {
+        throw new Error('File not found.');
+    }
+    const file = await getS3File(originFile.s3Path);
+    const wb = xlsx.read(file, { type: 'buffer' });
+    const worksheet = wb.Sheets[sheetName];
+
+    const jsonData: any[][] = xlsx.utils.sheet_to_json(worksheet, {
+        header: 1,
+        defval: '',
+        blankrows: false,
+    });
+
+    if (jsonData.length === 0) {
+        throw new Error('Sheet not found.');
+    }
+    return jsonData;
+}
