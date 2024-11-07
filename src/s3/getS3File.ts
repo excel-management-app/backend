@@ -1,9 +1,9 @@
 import { GetObjectCommand } from '@aws-sdk/client-s3';
-import { getS3V3Client } from 's3/getS3V3Client';
+import { getS3V3Client } from './getS3V3Client';
 import type { Readable } from 'stream';
 
 export const getS3File = async (s3Path: string): Promise<Buffer> => {
-    const s3 = getS3V3Client();
+    const s3 = getS3V3Client(true);
     const command = new GetObjectCommand({
         Bucket: process.env.S3_BUCKET,
         Key: s3Path,

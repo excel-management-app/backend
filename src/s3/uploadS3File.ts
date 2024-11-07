@@ -13,7 +13,6 @@ export const uploadS3File = async ({
     cache = true,
 }: Dependencies): Promise<{
     result: PutObjectCommandOutput;
-    fileUrl: string;
 }> => {
     const s3Client = getS3V3Client(cache);
 
@@ -25,8 +24,5 @@ export const uploadS3File = async ({
 
     const result = await s3Client.send(putObjectCommand);
 
-    // Construct the file URL
-    const fileUrl = `https://${process.env.S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${s3Path}`;
-
-    return { result, fileUrl };
+    return { result };
 };
