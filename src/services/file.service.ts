@@ -87,80 +87,7 @@ export const uploadMapFile = (req: Request, res: Response) => {
     }
 };
 
-export const getFileData = async (
-    req: Request,
-    res: Response,
-): Promise<void> => {
-    try {
-        const { fileId } = req.params;
 
-        const files = await getFileDataByFileId(fileId);
-        const firstFile = files[0];
-
-        // combine data to result with baseFileInfo and sheets data from files
-
-        const result = {
-            id: firstFile._id,
-            fileName: firstFile.fileName,
-            uploadedAt: firstFile.uploadedAt,
-            sheets: files.reduce(
-                (
-                    acc: {
-                        sheetName: string;
-                        headers: string[];
-                        rows: any[];
-                    }[],
-                    file,
-                ) => {
-                    file.sheets.forEach((sheet) => {
-                        const existingSheet = acc.find(
-                            (s) => s.sheetName === sheet.sheetName,
-                        );
-                        if (existingSheet) {
-                            existingSheet.rows.push(...sheet.rows);
-                        } else {
-                            acc.push({
-                                sheetName: sheet.sheetName as string,
-                                headers: sheet.headers as string[],
-                                rows: sheet.rows,
-                            });
-                        }
-                    });
-                    return acc;
-                },
-                [],
-            ),
-        };
-
-        res.json({ data: result });
-    } catch (error: any) {
-        console.error('Error retrieving file data:', error);
-        res.status(500).send('Error retrieving file data: ' + error.message);
-    }
-};
-// get files
-export const getFiles = async (_req: Request, res: Response) => {
-    try {
-        // Fetch files from GridFS
-        const mongoInstance = MongoDB.getInstance();
-        const db = (await mongoInstance.connect()).db;
-        if (!db) {
-            throw new Error('Failed to connect to the database');
-        }
-        const bucket = new GridFSBucket(db, { bucketName: 'excelFiles' });
-        const filesCursor = bucket.find();
-        const gridFsFiles = await filesCursor.toArray();
-        const gridFsFilesMap = gridFsFiles.map((file) => ({
-            id: file._id.toString(),
-            fileName: file.filename,
-        }));
-
-        res.json({ data: gridFsFilesMap });
-    } catch (error) {
-        console.error('Error retrieving files:', error);
-        res.status(500).send('Error retrieving files');
-    }
-};
 // export file
 export const exportFileBySheet = async (
     req: Request,
@@ -249,14 +176,9 @@ export const exportManyWord = (req: Request, res: Response) => {
     }
 };
 
-// get row data by fileId, sheetName, tamY
-export const getFileDataBySheetNameAndTamY = async (
-    req: Request,
-    res: Response,
-): Promise<void> => {
+export const getFileData = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { fileId, sheetName, tamY } = req.params;
-
+        const { fileId } = req.params;
         const files = await getFileDataByFileId(fileId);
 
         if (!files || files.length === 0) {
@@ -264,27 +186,100 @@ export const getFileDataBySheetNameAndTamY = async (
             return;
         }
 
-        let row = null;
-        for (const file of files) {
-            const sheet = file.sheets.find(
-                (s: any) => s.sheetName === sheetName,
-            );
-            if (sheet) {
-                row = sheet.rows.find(
-                    (r: any) =>
-                        r.tamY === tamY ||
-                        `${r.soHieuToBanDo}_${r.soThuTuThua}` === tamY,
-                );
-                if (row) {
-                    break;
+        const sheetMap = new Map<string, { sheetName: string; headers: string[]; rows: any[] }>();
+
+        files.forEach((file) => {
+            file.sheets.forEach((sheet) => {
+                // Kiểm tra nếu sheetName có giá trị và là kiểu string
+                if (typeof sheet.sheetName === 'string' && sheet.sheetName.trim() !== '') {
+                    // Ép kiểu sheetName về string nếu cần thiết
+                    const sheetName = sheet.sheetName as string;
+
+                    // Kiểm tra và ép kiểu sheet.headers thành string[] nếu cần thiết
+                    const headers = Array.isArray(sheet.headers) 
+                        ? sheet.headers.map(header => String(header)) // Chuyển các phần tử thành string nếu chưa phải
+                        : [];
+
+                    if (!sheetMap.has(sheetName)) {
+                        sheetMap.set(sheetName, { sheetName, headers, rows: [...sheet.rows] });
+                    } else {
+                        sheetMap.get(sheetName)!.rows.push(...sheet.rows);
+                    }
+                } else {
+                    console.warn(`Invalid sheet name: ${sheet.sheetName}`);
                 }
-            }
+            });
+        });
+
+        const result = {
+            id: files[0]._id,
+            fileName: files[0].fileName,
+            uploadedAt: files[0].uploadedAt,
+            sheets: Array.from(sheetMap.values()),
+        };
+
+        res.json({ data: result });
+    } catch (error: any) {
+        console.error('Error retrieving file data:', error);
+        res.status(500).send('Error retrieving file data: ' + error.message);
+    }
+};
+
+
+
+export const getFiles = async (_req: Request, res: Response): Promise<void> => {
+    try {
+        const mongoInstance = MongoDB.getInstance();
+        const db = (await mongoInstance.connect()).db;
+        if (!db) throw new Error('Failed to connect to the database');
+
+        const bucket = new GridFSBucket(db, { bucketName: 'excelFiles' });
+        const filesCursor = bucket.find({}, { projection: { _id: 1, filename: 1 } }); // Chỉ lấy các trường cần thiết
+
+        const gridFsFiles = await filesCursor.toArray();
+
+        res.json({
+            data: gridFsFiles.map(file => ({
+                id: file._id.toString(),
+                fileName: file.filename,
+            })),
+        });
+    } catch (error) {
+        console.error('Error retrieving files:', error);
+        res.status(500).send('Error retrieving files');
+    }
+};
+
+
+export const getFileDataBySheetNameAndTamY = async (
+    req: Request,
+    res: Response,
+): Promise<void> => {
+    try {
+        const { fileId, sheetName, tamY } = req.params;
+
+        const file = await ExcelFile.findOne(
+            { gridFSId: fileId, 'sheets.sheetName': sheetName },
+            { 'sheets.$': 1 }, // Chỉ lấy sheet cụ thể
+        ).lean();
+
+        if (!file) {
+            res.status(404).send('File not found.');
+            return;
         }
+
+        const sheet = file.sheets[0];
+        const row = sheet.rows.find(
+            (r: any) =>
+                r.tamY === tamY ||
+                `${r.soHieuToBanDo}_${r.soThuTuThua}` === tamY,
+        );
 
         if (!row) {
             res.status(404).send('Row not found.');
             return;
         }
+
         res.json({ data: row });
     } catch (error: any) {
         console.error('Error retrieving row data:', error);
@@ -292,7 +287,7 @@ export const getFileDataBySheetNameAndTamY = async (
     }
 };
 
-// Update or add a row in a sheet
+
 export const updateOrAddRowInSheet = async (
     req: Request,
     res: Response,
@@ -302,9 +297,8 @@ export const updateOrAddRowInSheet = async (
         const rowData = req.body.data;
         const accountId = getAccountIdFromHeader(req);
         const tamY = `${rowData.soHieuToBanDo}_${rowData.soThuTuThua}`;
-
+        
         const files = await getFileDataByFileId(fileId);
-
         if (!files || files.length === 0) {
             res.status(404).send('File not found.');
             return;
@@ -313,56 +307,32 @@ export const updateOrAddRowInSheet = async (
         const { fileToUpdate, sheetToUpdate, rowIndexToUpdate } = checkRowExist(
             { files, sheetName, tamY },
         );
+
         const newRow = {
             ...rowData,
             tamY,
             accountId,
         };
+
         if (fileToUpdate && sheetToUpdate && rowIndexToUpdate !== -1) {
-            // Update existing row
-
-            sheetToUpdate.rows[rowIndexToUpdate] = newRow;
-
-            await ExcelFile.findOneAndUpdate(
-                { _id: fileToUpdate._id, 'sheets.sheetName': sheetName },
-                { $set: { 'sheets.$.rows': sheetToUpdate.rows } },
-                { new: true },
-            );
-            res.status(200).json({
-                message: 'Row updated successfully',
-            });
+            // Update existing row directly
+            await ExcelFile.bulkWrite([
+                {
+                    updateOne: {
+                        filter: { _id: fileToUpdate._id, 'sheets.sheetName': sheetName },
+                        update: { $set: { 'sheets.$.rows.$[row]': newRow } },
+                        arrayFilters: [{ 'row.tamY': tamY }],
+                    },
+                },
+            ]);
+            res.status(200).json({ message: 'Row updated successfully' });
         } else {
-            // Add new row
-            const sheet = files
-                .flatMap((file) => file.sheets)
-                .find((s) => s.sheetName === sheetName);
-
-            if (!sheet) {
-                res.status(404).send('Sheet not found.');
-                return;
-            }
-
-            sheet.rows.push({
-                ...rowData,
-                tamY,
-                accountId,
-            });
-
-            const fileToUpdate = files.find((file) =>
-                file.sheets.some((sheet) => sheet.sheetName === sheetName),
+            // Add new row directly
+            await ExcelFile.updateOne(
+                { _id: fileToUpdate?._id, 'sheets.sheetName': sheetName },
+                { $push: { 'sheets.$.rows': newRow } },
             );
-
-            if (fileToUpdate) {
-                await ExcelFile.findOneAndUpdate(
-                    { _id: fileToUpdate._id, 'sheets.sheetName': sheetName },
-                    { $push: { 'sheets.$.rows': newRow } },
-                    { new: true },
-                );
-            }
-            res.status(200).json({
-                message: 'Row added successfully',
-                tamY,
-            });
+            res.status(200).json({ message: 'Row added successfully', tamY });
         }
     } catch (error: any) {
         res.status(500).send('Error updating or adding row: ' + error.message);
