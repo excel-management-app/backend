@@ -1,19 +1,18 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Request, Response } from 'express';
 import fs from 'fs';
+import { sortBy } from 'lodash';
 import { LocalStorage } from 'node-localstorage';
 import xlsx from 'xlsx';
 import ExcelFile from '../models/excelFile';
 import OriginFile from '../models/originFile';
-import { getS3File } from '../s3/getS3File';
-import { uploadS3File } from '../s3/uploadS3File';
 import {
     exportExcelDataFromDB,
     OUTPUT_FILE_PATH,
 } from './functions/exportExcelDataFromDB';
 import { getAccountIdFromHeader } from './functions/getAccountIdFromHeader';
 import { getFileName } from './functions/insertExcelDataToDB';
-import { sortBy } from 'lodash';
+import { getJsonFileDataByFileId } from './functions/getJsonFileDataByFileId';
 
 global.localStorage = new LocalStorage('./scratch');
 
@@ -28,18 +27,13 @@ export const uploadExcelFile = async (
         }
 
         const filePath = req.file.path;
-        const s3Path = req.file.filename;
 
         const fileToUpload = fs.readFileSync(filePath);
         const wb = xlsx.read(fileToUpload, { type: 'buffer' });
         const sheetNames = wb.SheetNames;
-        await uploadS3File({
-            s3Path,
-            body: fileToUpload,
-            cache: true,
-        });
+
         const originFile = await OriginFile.create({
-            s3Path,
+            path: filePath,
             fileName: getFileName(filePath),
             sheetNames,
         });
@@ -121,11 +115,11 @@ export const getFileData = async (
 
         const originFile = await OriginFile.findById(fileId);
         // get file from s3
-        if (!originFile || !originFile.s3Path) {
+        if (!originFile || !originFile.path) {
             res.status(404).send('File not found.');
             return;
         }
-        const file = await getS3File(originFile.s3Path);
+        const file = fs.readFileSync(originFile.path);
         const wb = xlsx.read(file, { type: 'buffer' });
         const worksheet = wb.Sheets[sheetName];
 
@@ -323,12 +317,10 @@ export const getFileDataBySheetNameAndTamY = async (
                 );
             }
         } else {
-            console.time('getJsonFileDataByFileIdFromS3');
-            const jsonData: any[][] = await getJsonFileDataByFileIdFromS3(
+            const jsonData: any[][] = await getJsonFileDataByFileId(
                 fileId,
                 sheetName,
             );
-            console.timeEnd('getJsonFileDataByFileIdFromS3');
 
             if (!jsonData || jsonData.length < 3) {
                 res.status(400).send('Invalid or missing data.');
@@ -418,31 +410,6 @@ export const updateOrAddRowInSheet = async (
         res.status(500).send('Error updating or adding row: ' + error.message);
     }
 };
-
-async function getJsonFileDataByFileIdFromS3(
-    fileId: string,
-    sheetName: string,
-) {
-    const originFile = await OriginFile.findById(fileId);
-    // get file from s3
-    if (!originFile || !originFile.s3Path) {
-        throw new Error('File not found.');
-    }
-    const file = await getS3File(originFile.s3Path);
-    const wb = xlsx.read(file, { type: 'buffer' });
-    const worksheet = wb.Sheets[sheetName];
-
-    const jsonData: any[][] = xlsx.utils.sheet_to_json(worksheet, {
-        header: 1,
-        defval: '',
-        blankrows: false,
-    });
-
-    if (jsonData.length === 0) {
-        throw new Error('Sheet not found.');
-    }
-    return jsonData;
-}
 
 function binarySearchRow<T>(
     sortedArray: T[],
