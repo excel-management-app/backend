@@ -13,6 +13,7 @@ import {
 } from './functions/exportExcelDataFromDB';
 import { getAccountIdFromHeader } from './functions/getAccountIdFromHeader';
 import { getFileName } from './functions/insertExcelDataToDB';
+import { sortBy } from 'lodash';
 
 global.localStorage = new LocalStorage('./scratch');
 
@@ -322,20 +323,23 @@ export const getFileDataBySheetNameAndTamY = async (
                 );
             }
         } else {
+            console.time('getJsonFileDataByFileIdFromS3');
             const jsonData: any[][] = await getJsonFileDataByFileIdFromS3(
                 fileId,
                 sheetName,
             );
+            console.timeEnd('getJsonFileDataByFileIdFromS3');
 
             if (!jsonData || jsonData.length < 3) {
                 res.status(400).send('Invalid or missing data.');
                 return;
             }
 
+            // Set sheet headers, replacing empty headers with jsonData[2] values if necessary.
             const sheetHeaders = jsonData[0].map(
                 (header, index) => header || jsonData[2][index],
             );
-            const rows = jsonData.slice(1);
+            const rows = jsonData.slice(1).slice(3);
 
             const headerIndexMap = sheetHeaders.reduce(
                 (map, header, index) => {
@@ -345,20 +349,27 @@ export const getFileDataBySheetNameAndTamY = async (
                 {} as Record<string, number>,
             );
 
-            const rowFromJson = rows.find((row) => {
-                const tamYValue = row[headerIndexMap['tamY']];
-                const combinedValue = `${row[headerIndexMap['soHieuToBanDo']]}_${row[headerIndexMap['soThuTuThua']]}`;
-                return tamYValue === tamY || combinedValue === tamY;
-            });
+            // Sort rows based on combined key of `soHieuToBanDo` and `soThuTuThua`.
+            const sortedRows = sortBy(rows, [
+                (row) => Number(row[headerIndexMap['soHieuToBanDo']]),
+                (row) => Number(row[headerIndexMap['soThuTuThua']]),
+            ]);
 
-            if (!rowFromJson) {
+            const targetRow = binarySearchRow(
+                sortedRows,
+                tamY,
+                (row) =>
+                    `${row[headerIndexMap['soHieuToBanDo']]}_${row[headerIndexMap['soThuTuThua']]}`,
+            );
+
+            if (!targetRow) {
                 res.status(404).send('Row not found.');
                 return;
             }
 
             const rowObject = sheetHeaders.reduce(
                 (obj, header, index) => {
-                    obj[header] = rowFromJson[index];
+                    obj[header] = targetRow[index];
                     return obj;
                 },
                 {} as Record<string, any>,
@@ -431,4 +442,38 @@ async function getJsonFileDataByFileIdFromS3(
         throw new Error('Sheet not found.');
     }
     return jsonData;
+}
+
+function binarySearchRow<T>(
+    sortedArray: T[],
+    targetKey: string,
+    keyExtractor: (element: T) => string,
+): T | null {
+    let low = 0;
+    let high = sortedArray.length - 1;
+
+    while (low <= high) {
+        const mid = Math.floor((low + high) / 2);
+        const midKey = keyExtractor(sortedArray[mid]);
+        const comparison = compareString(midKey, targetKey);
+
+        if (comparison === 0) {
+            return sortedArray[mid];
+        } else if (comparison < 0) {
+            low = mid + 1;
+        } else {
+            high = mid - 1;
+        }
+    }
+
+    return null;
+}
+
+function compareString(a: string, b: string): number {
+    const [a1, a2] = a.split('_').map(Number);
+    const [b1, b2] = b.split('_').map(Number);
+    if (a1 === b1) {
+        return a2 - b2;
+    }
+    return a1 - b1;
 }
