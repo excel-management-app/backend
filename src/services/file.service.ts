@@ -87,7 +87,6 @@ export const uploadMapFile = (req: Request, res: Response) => {
     }
 };
 
-
 // export file
 export const exportFileBySheet = async (
     req: Request,
@@ -176,7 +175,10 @@ export const exportManyWord = (req: Request, res: Response) => {
     }
 };
 
-export const getFileData = async (req: Request, res: Response): Promise<void> => {
+export const getFileData = async (
+    req: Request,
+    res: Response,
+): Promise<void> => {
     try {
         const { fileId } = req.params;
         const files = await getFileDataByFileId(fileId);
@@ -186,27 +188,39 @@ export const getFileData = async (req: Request, res: Response): Promise<void> =>
             return;
         }
 
-        const sheetMap = new Map<string, { sheetName: string; headers: string[]; rows: any[] }>();
+        const sheetMap = new Map<
+            string,
+            { sheetName: string; headers: string[]; rows: any[] }
+        >();
 
         files.forEach((file) => {
             file.sheets.forEach((sheet) => {
                 // Kiểm tra nếu sheetName có giá trị và là kiểu string
-                if (typeof sheet.sheetName === 'string' && sheet.sheetName.trim() !== '') {
+                if (
+                    typeof sheet.sheetName === 'string' &&
+                    sheet.sheetName.trim() !== ''
+                ) {
                     // Ép kiểu sheetName về string nếu cần thiết
-                    const sheetName = sheet.sheetName as string;
+                    const sheetName = sheet.sheetName;
 
                     // Kiểm tra và ép kiểu sheet.headers thành string[] nếu cần thiết
-                    const headers = Array.isArray(sheet.headers) 
-                        ? sheet.headers.map(header => String(header)) // Chuyển các phần tử thành string nếu chưa phải
+                    const headers = Array.isArray(sheet.headers)
+                        ? sheet.headers.map((header) => String(header)) // Chuyển các phần tử thành string nếu chưa phải
                         : [];
 
                     if (!sheetMap.has(sheetName)) {
-                        sheetMap.set(sheetName, { sheetName, headers, rows: [...sheet.rows] });
+                        sheetMap.set(sheetName, {
+                            sheetName,
+                            headers,
+                            rows: [...sheet.rows],
+                        });
                     } else {
                         sheetMap.get(sheetName)!.rows.push(...sheet.rows);
                     }
                 } else {
-                    console.warn(`Invalid sheet name: ${sheet.sheetName}`);
+                    console.warn(
+                        `Invalid sheet name: ${String(sheet.sheetName)}`,
+                    );
                 }
             });
         });
@@ -225,21 +239,24 @@ export const getFileData = async (req: Request, res: Response): Promise<void> =>
     }
 };
 
-
-
 export const getFiles = async (_req: Request, res: Response): Promise<void> => {
     try {
         const mongoInstance = MongoDB.getInstance();
         const db = (await mongoInstance.connect()).db;
-        if (!db) throw new Error('Failed to connect to the database');
+        if (!db) {
+            throw new Error('Failed to connect to the database');
+        }
 
         const bucket = new GridFSBucket(db, { bucketName: 'excelFiles' });
-        const filesCursor = bucket.find({}, { projection: { _id: 1, filename: 1 } }); // Chỉ lấy các trường cần thiết
+        const filesCursor = bucket.find(
+            {},
+            { projection: { _id: 1, filename: 1 } },
+        ); // Chỉ lấy các trường cần thiết
 
         const gridFsFiles = await filesCursor.toArray();
 
         res.json({
-            data: gridFsFiles.map(file => ({
+            data: gridFsFiles.map((file) => ({
                 id: file._id.toString(),
                 fileName: file.filename,
             })),
@@ -249,7 +266,6 @@ export const getFiles = async (_req: Request, res: Response): Promise<void> => {
         res.status(500).send('Error retrieving files');
     }
 };
-
 
 export const getFileDataBySheetNameAndTamY = async (
     req: Request,
@@ -287,7 +303,6 @@ export const getFileDataBySheetNameAndTamY = async (
     }
 };
 
-
 export const updateOrAddRowInSheet = async (
     req: Request,
     res: Response,
@@ -297,7 +312,7 @@ export const updateOrAddRowInSheet = async (
         const rowData = req.body.data;
         const accountId = getAccountIdFromHeader(req);
         const tamY = `${rowData.soHieuToBanDo}_${rowData.soThuTuThua}`;
-        
+
         const files = await getFileDataByFileId(fileId);
         if (!files || files.length === 0) {
             res.status(404).send('File not found.');
@@ -319,7 +334,10 @@ export const updateOrAddRowInSheet = async (
             await ExcelFile.bulkWrite([
                 {
                     updateOne: {
-                        filter: { _id: fileToUpdate._id, 'sheets.sheetName': sheetName },
+                        filter: {
+                            _id: fileToUpdate._id,
+                            'sheets.sheetName': sheetName,
+                        },
                         update: { $set: { 'sheets.$.rows.$[row]': newRow } },
                         arrayFilters: [{ 'row.tamY': tamY }],
                     },

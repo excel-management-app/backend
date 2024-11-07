@@ -54,14 +54,14 @@ async function processExcelFile(
 ): Promise<void> {
     const downloadStream = bucket.openDownloadStream(fileId);
     const buffer = await bufferStreamToBuffer(downloadStream);
-    
+
     const workbook = xlsx.read(buffer, { type: 'buffer', dense: true });
     const fileName = getFileName(originalFilePath);
     let totalRowsInserted = 0;
 
     for (const sheetName of workbook.SheetNames) {
         const worksheet = workbook.Sheets[sheetName];
-        
+
         const jsonData: any[][] = xlsx.utils.sheet_to_json(worksheet, {
             header: 1,
             defval: '',
@@ -71,13 +71,17 @@ async function processExcelFile(
         if (jsonData.length === 0) continue;
 
         const sheetHeaders = jsonData[0];
-        const headers = sheetHeaders.map((header, index) => header || jsonData[2][index]);
+        const headers = sheetHeaders.map(
+            (header, index) => header || jsonData[2][index],
+        );
 
         const sheetRows: any[] = [];
         let batchCount = 0;
 
         for (let i = 1; i < jsonData.length; i += BATCH_SIZE) {
-            const batch = jsonData.slice(i, i + BATCH_SIZE).filter((row) => row.some((cell) => cell !== ''));
+            const batch = jsonData
+                .slice(i, i + BATCH_SIZE)
+                .filter((row) => row.some((cell) => cell !== ''));
 
             const batchRows = batch.map((row) => {
                 const rowObject: any = {};
@@ -90,7 +94,10 @@ async function processExcelFile(
 
             sheetRows.push(...batchRows);
 
-            if (sheetRows.length >= BATCH_SIZE || i + BATCH_SIZE >= jsonData.length) {
+            if (
+                sheetRows.length >= BATCH_SIZE ||
+                i + BATCH_SIZE >= jsonData.length
+            ) {
                 const excelFile = new ExcelFile({
                     fileName,
                     gridFSId: fileId,
@@ -105,9 +112,11 @@ async function processExcelFile(
 
                 await excelFile.save();
                 totalRowsInserted += sheetRows.length;
-                console.log(`Inserted batch of ${sheetRows.length} rows from sheet "${sheetName}"`);
-                
-                sheetRows.length = 0;  // Clear batch to manage memory
+                console.log(
+                    `Inserted batch of ${sheetRows.length} rows from sheet "${sheetName}"`,
+                );
+
+                sheetRows.length = 0; // Clear batch to manage memory
                 batchCount++;
             }
         }
@@ -118,7 +127,9 @@ async function processExcelFile(
     }
 }
 
-async function bufferStreamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
+async function bufferStreamToBuffer(
+    stream: NodeJS.ReadableStream,
+): Promise<Buffer> {
     const chunks: Buffer[] = [];
     return new Promise((resolve, reject) => {
         stream.on('data', (chunk) => chunks.push(chunk));
@@ -126,8 +137,6 @@ async function bufferStreamToBuffer(stream: NodeJS.ReadableStream): Promise<Buff
         stream.on('error', reject);
     });
 }
-
-
 
 function getFileName(filePath: string): string {
     const parts = filePath.split(/[/\\]/);

@@ -164,8 +164,7 @@ export const exportManytoWord = async (
                     pathFileTemplate.trim() == ''
                 ) {
                     res.status(404).send(
-                         type ==
-                            'Cấp mới'
+                        type == 'Cấp mới'
                             ? 'Bạn chưa upload file template word mẫu đơn cấp mới'
                             : 'Bạn chưa upload file template word mẫu đơn cấp đổi',
                     );
@@ -305,8 +304,7 @@ export const exportOneToWord = async (
                 pathFileTemplate.trim() == ''
             ) {
                 res.status(404).send(
-                     type ==
-                        'Cấp mới'
+                    type == 'Cấp mới'
                         ? 'Bạn chưa upload file template word mẫu đơn cấp mới'
                         : 'Bạn chưa upload file template word mẫu đơn cấp đổi',
                 );
