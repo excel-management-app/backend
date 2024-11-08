@@ -27,6 +27,11 @@ export function checkRowExist({ files, sheetName, tamY }: Props) {
                     sheetToUpdate = sheet;
                     rowIndexToUpdate = rowIndex;
                     break;
+                } else {
+                    // Nếu không tìm thấy row, lưu sheetToUpdate và fileToUpdate
+                    fileToUpdate = file;
+                    sheetToUpdate = sheet;
+                    rowIndexToUpdate = -1; // Trả về -1 để biết đây là trường hợp thêm mới
                 }
             }
         }
