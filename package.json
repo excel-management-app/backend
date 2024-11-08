@@ -5,7 +5,7 @@
     "main": "build/index.js",
     "scripts": {
         "compile": "tsc",
-        "create-dirs": "mkdir -p build/files/exports build/files/templates",
+        "create-dirs": "mkdirp build/files/exports build/files/templates",
         "copy-exports": "copyfiles -f src/files/exports/**/* build/files/exports",
         "copy-templates": "copyfiles -f src/files/templates/**/* build/files/templates",
         "build": "npm run compile && npm run create-dirs && npm run copy-exports && npm run copy-templates",
@@ -66,6 +66,7 @@
         "eslint-formatter-summary": "^1.1.0",
         "eslint-plugin-sonarjs": "^0.18.0",
         "fs-extra": "^11.2.0",
+        "mkdirp": "^3.0.1",
         "morgan": "^1.10.0",
         "nodemon": "^3.1.7",
         "prettier": "^3.3.3",
