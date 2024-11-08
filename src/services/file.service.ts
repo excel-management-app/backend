@@ -1,17 +1,17 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Request, Response } from 'express';
-import { GridFSBucket } from 'mongodb';
 import { LocalStorage } from 'node-localstorage';
-import MongoDB from '../db';
 import ExcelFile from '../models/excelFile';
+import OriginFile from '../models/originFile';
+import { checkRowExist } from './functions/checkRowExist';
 import {
     exportExcelDataFromDB,
     OUTPUT_FILE_PATH,
 } from './functions/exportExcelDataFromDB';
 import { getAccountIdFromHeader } from './functions/getAccountIdFromHeader';
-import { insertExcelDataToDB } from './functions/insertExcelDataToDB';
 import { getFileDataByFileId } from './functions/getFileDataByFileId';
-import { checkRowExist } from './functions/checkRowExist';
+import { getSheetFileData } from './functions/getSheetFileData';
+import { insertExcelDataToDB } from './functions/insertExcelDataToDB';
 
 global.localStorage = new LocalStorage('./scratch');
 
@@ -180,56 +180,45 @@ export const getFileData = async (
     res: Response,
 ): Promise<void> => {
     try {
-        const { fileId } = req.params;
-        const files = await getFileDataByFileId(fileId);
+        const { fileId, sheetName } = req.params;
+        const { page = 1, pageSize = 50 } = req.query;
+
+        const start = Number(page) * Number(pageSize);
+        const end = start + Number(pageSize);
+
+        const files = await getSheetFileData({
+            fileId,
+            sheetName,
+        });
 
         if (!files || files.length === 0) {
             res.status(404).send('File not found.');
             return;
         }
 
-        const sheetMap = new Map<
-            string,
-            { sheetName: string; headers: string[]; rows: any[] }
-        >();
-
+        const headers = files[0].sheets[0].headers;
+        const sheetRows: any[] = [];
         files.forEach((file) => {
-            file.sheets.forEach((sheet) => {
-                // Kiểm tra nếu sheetName có giá trị và là kiểu string
-                if (
-                    typeof sheet.sheetName === 'string' &&
-                    sheet.sheetName.trim() !== ''
-                ) {
-                    // Ép kiểu sheetName về string nếu cần thiết
-                    const sheetName = sheet.sheetName;
-
-                    // Kiểm tra và ép kiểu sheet.headers thành string[] nếu cần thiết
-                    const headers = Array.isArray(sheet.headers)
-                        ? sheet.headers.map((header) => String(header)) // Chuyển các phần tử thành string nếu chưa phải
-                        : [];
-
-                    if (!sheetMap.has(sheetName)) {
-                        sheetMap.set(sheetName, {
-                            sheetName,
-                            headers,
-                            rows: [...sheet.rows],
-                        });
-                    } else {
-                        sheetMap.get(sheetName)!.rows.push(...sheet.rows);
-                    }
-                } else {
-                    console.warn(
-                        `Invalid sheet name: ${String(sheet.sheetName)}`,
-                    );
-                }
-            });
+            sheetRows.push(...file.sheets[0].rows);
         });
+        const totalRows = sheetRows.length;
+        let paginatedRows;
+        if (end > sheetRows.length) {
+            paginatedRows = sheetRows.slice(start, sheetRows.length);
+        } else {
+            paginatedRows = sheetRows.slice(start, end);
+        }
 
         const result = {
             id: files[0]._id,
             fileName: files[0].fileName,
             uploadedAt: files[0].uploadedAt,
-            sheets: Array.from(sheetMap.values()),
+            sheet: {
+                sheetName,
+                headers,
+                rows: paginatedRows,
+            },
+            totalRows,
         };
 
         res.json({ data: result });
@@ -239,28 +228,18 @@ export const getFileData = async (
     }
 };
 
-export const getFiles = async (_req: Request, res: Response): Promise<void> => {
+export const getFiles = async (_req: Request, res: Response) => {
     try {
-        const mongoInstance = MongoDB.getInstance();
-        const db = (await mongoInstance.connect()).db;
-        if (!db) {
-            throw new Error('Failed to connect to the database');
-        }
+        // Fetch files OriginFile
+        const files = await OriginFile.find();
+        const data = files.map((file) => ({
+            id: file.gridFSId?.toString(), // Thay đổi id thành gridFSId
+            fileName: file.fileName,
+            uploadedAt: file.uploadedAt,
+            sheetNames: file.sheetNames,
+        }));
 
-        const bucket = new GridFSBucket(db, { bucketName: 'excelFiles' });
-        const filesCursor = bucket.find(
-            {},
-            { projection: { _id: 1, filename: 1 } },
-        ); // Chỉ lấy các trường cần thiết
-
-        const gridFsFiles = await filesCursor.toArray();
-
-        res.json({
-            data: gridFsFiles.map((file) => ({
-                id: file._id.toString(),
-                fileName: file.filename,
-            })),
-        });
+        res.json({ data });
     } catch (error) {
         console.error('Error retrieving files:', error);
         res.status(500).send('Error retrieving files');
@@ -282,9 +261,16 @@ export const getFileDataBySheetNameAndTamY = async (
                     rows: { $elemMatch: { tamY } },
                 },
             },
-        }).select('sheets.$').lean();
+        })
+            .select('sheets.$')
+            .lean();
 
-        if (!file || !file.sheets.length || !file.sheets[0].rows.length) {
+        if (
+            !file ||
+            !file.sheets ||
+            !file.sheets.length ||
+            !file.sheets[0].rows.length
+        ) {
             res.status(404).send('Row not found.');
             return;
         }
@@ -303,10 +289,11 @@ export const updateOrAddRowInSheet = async (
 ): Promise<void> => {
     try {
         const { fileId, sheetName } = req.params;
+
         const rowData = req.body.data;
         const accountId = getAccountIdFromHeader(req);
         const tamY = `${rowData.soHieuToBanDo}_${rowData.soThuTuThua}`;
-        
+
         const files = await getFileDataByFileId(fileId);
         if (!files || files.length === 0) {
             res.status(404).send('File not found.');
@@ -328,7 +315,10 @@ export const updateOrAddRowInSheet = async (
             await ExcelFile.bulkWrite([
                 {
                     updateOne: {
-                        filter: { _id: fileToUpdate._id, 'sheets.sheetName': sheetName },
+                        filter: {
+                            _id: fileToUpdate._id,
+                            'sheets.sheetName': sheetName,
+                        },
                         update: { $set: { 'sheets.$.rows.$[row]': newRow } },
                         arrayFilters: [{ 'row.tamY': tamY }],
                     },

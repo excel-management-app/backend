@@ -1,10 +1,9 @@
-import MongoDB from '../../db';
+import fs from 'fs';
 import { GridFSBucket, ObjectId } from 'mongodb';
 import xlsx from 'xlsx';
+import MongoDB from '../../db';
 import ExcelFile from '../../models/excelFile';
-import fs from 'fs';
-import stream from 'stream';
-import { chunk } from 'lodash';
+import OriginFile from '../../models/originFile';
 
 const BATCH_SIZE = 3000; // Adjust based on your needs
 
@@ -24,8 +23,6 @@ export const insertExcelDataToDB = async (filePath: string): Promise<void> => {
 
         // Process the uploaded file
         await processExcelFile(bucket, fileId, filePath);
-
-        console.log(`Successfully processed ${filePath}`);
     } catch (error) {
         console.error('Error processing Excel file:', error);
         throw error;
@@ -57,9 +54,17 @@ async function processExcelFile(
 
     const workbook = xlsx.read(buffer, { type: 'buffer', dense: true });
     const fileName = getFileName(originalFilePath);
+    const sheetNames = workbook.SheetNames;
+
+    await OriginFile.create({
+        gridFSId: fileId,
+        fileName,
+        sheetNames,
+    });
+
     let totalRowsInserted = 0;
 
-    for (const sheetName of workbook.SheetNames) {
+    for (const sheetName of sheetNames) {
         const worksheet = workbook.Sheets[sheetName];
 
         const jsonData: any[][] = xlsx.utils.sheet_to_json(worksheet, {
@@ -68,7 +73,9 @@ async function processExcelFile(
             blankrows: false,
         });
 
-        if (jsonData.length === 0) continue;
+        if (jsonData.length === 0) {
+            continue;
+        }
 
         const sheetHeaders = jsonData[0];
         const headers = sheetHeaders.map(
@@ -112,9 +119,6 @@ async function processExcelFile(
 
                 await excelFile.save();
                 totalRowsInserted += sheetRows.length;
-                console.log(
-                    `Inserted batch of ${sheetRows.length} rows from sheet "${sheetName}"`,
-                );
 
                 sheetRows.length = 0; // Clear batch to manage memory
                 batchCount++;
