@@ -3,7 +3,6 @@ import compression from 'compression';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
-import fs from 'fs';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import cron from 'node-cron';
@@ -69,18 +68,11 @@ async function connectToMongoDB() {
 }
 // Schedule a cron job to run every 5 minutes
 const EXPORT_DIR = path.join(__dirname, 'files/exports');
-const TEMPLATE_DIR = path.join(__dirname, 'files/templates');
 cron.schedule('*/5 * * * *', () => {
     console.log('Running file deletion task...');
     deleteFilesFromExportDir(EXPORT_DIR);
 });
-// // if no folder src/files/exports, create one for exports
-// if (!fs.existsSync(EXPORT_DIR)) {
-//     fs.mkdirSync(EXPORT_DIR);
-// }
-// if (!fs.existsSync(TEMPLATE_DIR)) {
-//     fs.mkdirSync(TEMPLATE_DIR);
-// }
+
 app.listen(PORT, () => {
     connectToMongoDB().catch((err) =>
         console.error('Error connecting to MongoDB:', err),

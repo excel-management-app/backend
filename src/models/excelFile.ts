@@ -15,21 +15,17 @@ const sheetSchema = new mongoose.Schema({
             }),
         },
     ],
-    fileId: mongoose.Schema.Types.ObjectId,
 });
 
 const excelFileSchema = new mongoose.Schema({
     fileName: { type: String, required: true },
     uploadedAt: { type: Date, default: Date.now },
     sheets: [sheetSchema],
-    gridFSId: {
-        type: mongoose.Schema.Types.ObjectId,
-        index: true,
-    },
+    fileId: mongoose.Schema.Types.ObjectId,
 });
 
 // Ensure index creation
-excelFileSchema.index({ gridFSId: 1 });
+excelFileSchema.index({ fileId: 1 });
 
 const ExcelFile = mongoose.model('ExcelFile', excelFileSchema);
 

@@ -140,7 +140,7 @@ async function processExcelFile(
     }
 }
 
-function getFileName(filePath: string): string {
+export function getFileName(filePath: string): string {
     const parts = filePath.split(/[/\\]/);
     const fileNameWithPrefix = parts[parts.length - 1];
     return fileNameWithPrefix.replace(/^\d+-/, '');
