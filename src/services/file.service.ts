@@ -274,28 +274,22 @@ export const getFileDataBySheetNameAndTamY = async (
     try {
         const { fileId, sheetName, tamY } = req.params;
 
-        const file = await ExcelFile.findOne(
-            { gridFSId: fileId, 'sheets.sheetName': sheetName },
-            { 'sheets.$': 1 }, // Chỉ lấy sheet cụ thể
-        ).lean();
+        const file = await ExcelFile.findOne({
+            gridFSId: fileId,
+            sheets: {
+                $elemMatch: {
+                    sheetName,
+                    rows: { $elemMatch: { tamY } },
+                },
+            },
+        }).select('sheets.$').lean();
 
-        if (!file) {
-            res.status(404).send('File not found.');
-            return;
-        }
-
-        const sheet = file.sheets[0];
-        const row = sheet.rows.find(
-            (r: any) =>
-                r.tamY === tamY ||
-                `${r.soHieuToBanDo}_${r.soThuTuThua}` === tamY,
-        );
-
-        if (!row) {
+        if (!file || !file.sheets.length || !file.sheets[0].rows.length) {
             res.status(404).send('Row not found.');
             return;
         }
 
+        const row = file.sheets[0].rows.find((r: any) => r.tamY === tamY);
         res.json({ data: row });
     } catch (error: any) {
         console.error('Error retrieving row data:', error);
@@ -312,7 +306,7 @@ export const updateOrAddRowInSheet = async (
         const rowData = req.body.data;
         const accountId = getAccountIdFromHeader(req);
         const tamY = `${rowData.soHieuToBanDo}_${rowData.soThuTuThua}`;
-
+        
         const files = await getFileDataByFileId(fileId);
         if (!files || files.length === 0) {
             res.status(404).send('File not found.');
@@ -334,10 +328,7 @@ export const updateOrAddRowInSheet = async (
             await ExcelFile.bulkWrite([
                 {
                     updateOne: {
-                        filter: {
-                            _id: fileToUpdate._id,
-                            'sheets.sheetName': sheetName,
-                        },
+                        filter: { _id: fileToUpdate._id, 'sheets.sheetName': sheetName },
                         update: { $set: { 'sheets.$.rows.$[row]': newRow } },
                         arrayFilters: [{ 'row.tamY': tamY }],
                     },
