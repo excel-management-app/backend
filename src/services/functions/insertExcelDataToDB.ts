@@ -14,7 +14,7 @@ export const insertExcelDataToDB = async (filePath: string): Promise<void> => {
         throw new Error('Failed to connect to the database');
     }
     const bucket = new GridFSBucket(db, {
-        bucketName: 'excelFiles',
+        bucketName: 'excelfiles',
     });
 
     try {
@@ -22,7 +22,7 @@ export const insertExcelDataToDB = async (filePath: string): Promise<void> => {
         const fileId = await uploadToGridFS(bucket, filePath);
 
         // Process the uploaded file
-        await processExcelFile(bucket, fileId, filePath);
+        await processExcelFile(bucket, fileId, filePath, db);
     } catch (error) {
         console.error('Error processing Excel file:', error);
         throw error;
@@ -48,6 +48,7 @@ async function processExcelFile(
     bucket: GridFSBucket,
     fileId: ObjectId,
     originalFilePath: string,
+    db: any,
 ): Promise<void> {
     const downloadStream = bucket.openDownloadStream(fileId);
     const buffer = await bufferStreamToBuffer(downloadStream);
@@ -63,65 +64,56 @@ async function processExcelFile(
     });
 
     let totalRowsInserted = 0;
+    const excelFileCollection = db.collection('excelfiles');
 
     for (const sheetName of sheetNames) {
         const worksheet = workbook.Sheets[sheetName];
-
         const jsonData: any[][] = xlsx.utils.sheet_to_json(worksheet, {
             header: 1,
             defval: '',
             blankrows: false,
         });
 
-        if (jsonData.length === 0) {
-            continue;
-        }
+        if (jsonData.length === 0) continue;
 
         const sheetHeaders = jsonData[0];
         const headers = sheetHeaders.map(
             (header, index) => header || jsonData[2][index],
         );
 
-        const sheetRows: any[] = [];
-        let batchCount = 0;
+        let sheetRows: any[] = [];
+        for (let i = 1; i < jsonData.length; i++) {
+            const row = jsonData[i];
+            if (!row.some((cell) => cell !== '')) continue;
 
-        for (let i = 1; i < jsonData.length; i += BATCH_SIZE) {
-            const batch = jsonData
-                .slice(i, i + BATCH_SIZE)
-                .filter((row) => row.some((cell) => cell !== ''));
-
-            const batchRows = batch.map((row) => {
-                const rowObject: any = {};
-                headers.forEach((header, index) => {
-                    rowObject[header] = row[index];
-                });
-                rowObject.tamY = `${rowObject.soHieuToBanDo}_${rowObject.soThuTuThua}`;
-                return rowObject;
+            const rowObject: any = {};
+            headers.forEach((header, index) => {
+                rowObject[header] = row[index];
             });
+            rowObject.tamY = `${rowObject.soHieuToBanDo}_${rowObject.soThuTuThua}`;
+            sheetRows.push(rowObject);
 
-            sheetRows.push(...batchRows);
-
-            if (
-                sheetRows.length >= BATCH_SIZE ||
-                i + BATCH_SIZE >= jsonData.length
-            ) {
-                const excelFile = new ExcelFile({
-                    fileName,
-                    gridFSId: fileId,
-                    sheets: [
-                        {
-                            sheetName,
-                            headers,
-                            rows: sheetRows,
+            if (sheetRows.length >= BATCH_SIZE || i === jsonData.length - 1) {
+                await excelFileCollection.bulkWrite([
+                    {
+                        insertOne: {
+                            document: {
+                                fileName,
+                                gridFSId: fileId,
+                                sheets: [
+                                    {
+                                        sheetName,
+                                        headers,
+                                        rows: sheetRows,
+                                    },
+                                ],
+                            },
                         },
-                    ],
-                });
+                    },
+                ]);
 
-                await excelFile.save();
                 totalRowsInserted += sheetRows.length;
-
-                sheetRows.length = 0; // Clear batch to manage memory
-                batchCount++;
+                sheetRows = []; // Clear batch to manage memory
             }
         }
     }

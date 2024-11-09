@@ -12,7 +12,7 @@ export const getGridFsFileById = async (fileId: string) => {
     if (!db) {
         throw new Error('Failed to connect to the database');
     }
-    const bucket = new GridFSBucket(db, { bucketName: 'excelFiles' });
+    const bucket = new GridFSBucket(db, { bucketName: 'excelfiles' });
     const fileCursor = bucket.find({ _id: new ObjectId(fileId) }, { limit: 1 });
     const gridFsFile = await fileCursor.next();
     if (!gridFsFile) {
