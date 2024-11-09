@@ -1,14 +1,9 @@
 import ExcelFile from '../../models/excelFile';
-import { RowData, Sheet } from '../types';
-import { getGridFsFileById } from './getGridFsFile';
+import { RowData } from '../types';
 
 export const findSheetToUpdate = async (fileId: string, sheetName: string) => {
     try {
-        const gridFsFile = await getGridFsFileById(fileId);
-        if (!gridFsFile) {
-            throw new Error('File not found');
-        }
-        const files = await ExcelFile.find({ fileName: gridFsFile.filename });
+        const files = await ExcelFile.find({ originFileId: fileId });
         const allFileSheets = files.flatMap((file) => file.sheets);
         // combine all sheet with the same name from all files
 

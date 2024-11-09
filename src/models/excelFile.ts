@@ -22,14 +22,14 @@ const excelFileSchema = new mongoose.Schema({
     fileName: { type: String, required: true },
     uploadedAt: { type: Date, default: Date.now },
     sheets: [sheetSchema],
-    gridFSId: {
+    originFileId: {
         type: mongoose.Schema.Types.ObjectId,
         index: true,
     },
 });
 
 // Ensure index creation
-excelFileSchema.index({ gridFSId: 1 });
+excelFileSchema.index({ originFileId: 1 });
 
 const ExcelFile = mongoose.model('ExcelFile', excelFileSchema);
 

@@ -1,8 +1,7 @@
 import * as ExcelJS from 'exceljs';
+import path from 'path';
 import ExcelFile from '../../models/excelFile';
 import { RowData, Sheet } from '../types';
-import { getGridFsFileById } from './getGridFsFile';
-import path from 'path';
 
 const EXPORT_TEMPLATE_PATH = path.join(
     __dirname,
@@ -18,11 +17,9 @@ export async function exportExcelDataFromDB({
     sheetName: string;
 }) {
     try {
-        const gridFsFile = await getGridFsFileById(fileId);
-        if (!gridFsFile) {
-            throw new Error('File not found');
-        }
-        const files = await ExcelFile.find({ fileName: gridFsFile.filename });
+        const files = await ExcelFile.find({
+            originFileId: fileId,
+        });
         if (!files.length) {
             throw new Error('File not found');
         }

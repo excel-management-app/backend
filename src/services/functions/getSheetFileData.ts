@@ -7,7 +7,7 @@ interface Props {
 
 export async function getSheetFileData({ fileId, sheetName }: Props) {
     return await ExcelFile.find({
-        gridFSId: fileId,
+        originFileId: fileId,
         sheets: { $elemMatch: { sheetName } },
     }).lean();
 }

@@ -5,12 +5,6 @@ const originFileSchema = new mongoose.Schema({
     fileName: { type: String, required: true },
     sheetNames: { type: Array, required: true },
     uploadedAt: { type: Date, default: Date.now },
-    // Reference to the GridFS file
-    gridFSId: {
-        type: mongoose.Schema.Types.ObjectId,
-        index: true,
-        comment: 'Reference to the GridFS file',
-    },
 });
 
 const OriginFile = mongoose.model('OriginFile', originFileSchema);

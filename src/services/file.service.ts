@@ -9,9 +9,8 @@ import {
     OUTPUT_FILE_PATH,
 } from './functions/exportExcelDataFromDB';
 import { getAccountIdFromHeader } from './functions/getAccountIdFromHeader';
-import { getFileDataByFileId } from './functions/getFileDataByFileId';
 import { getSheetFileData } from './functions/getSheetFileData';
-import { insertExcelDataToDB } from './functions/insertExcelDataToDB';
+import { insertExcelDataToDBV2 } from './functions/insertExcelDataToDBV2';
 
 global.localStorage = new LocalStorage('./scratch');
 
@@ -28,7 +27,7 @@ export const uploadExcelFile = async (
         const filePath = req.file.path;
 
         // Insert the Excel file into the database
-        await insertExcelDataToDB(filePath);
+        await insertExcelDataToDBV2(filePath);
 
         res.status(200).send('File successfully processed and data inserted.');
     } catch (error) {
@@ -233,7 +232,7 @@ export const getFiles = async (_req: Request, res: Response) => {
         // Fetch files OriginFile
         const files = await OriginFile.find();
         const data = files.map((file) => ({
-            id: file.gridFSId?.toString(), // Thay đổi id thành gridFSId
+            id: file._id.toString(),
             fileName: file.fileName,
             uploadedAt: file.uploadedAt,
             sheetNames: file.sheetNames,
@@ -254,7 +253,7 @@ export const getFileDataBySheetNameAndTamY = async (
         const { fileId, sheetName, tamY } = req.params;
 
         const file = await ExcelFile.findOne({
-            gridFSId: fileId,
+            originFileId: fileId,
             sheets: {
                 $elemMatch: {
                     sheetName,
@@ -294,7 +293,7 @@ export const updateOrAddRowInSheet = async (
         const accountId = getAccountIdFromHeader(req);
         const tamY = `${rowData.soHieuToBanDo}_${rowData.soThuTuThua}`;
 
-        const files = await getFileDataByFileId(fileId);
+        const files = await ExcelFile.find({ originFileId: fileId }).lean();
         if (!files || files.length === 0) {
             res.status(404).send('File not found.');
             return;
