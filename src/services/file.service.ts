@@ -281,6 +281,33 @@ export const getFileDataBySheetNameAndTamY = async (
         res.status(500).send('Error retrieving row data: ' + error.message);
     }
 };
+// getAllRowsBySheetName
+export const getAllRowsBySheetName = async (
+    req: Request,
+    res: Response,
+): Promise<void> => {
+    try {
+        const { fileId, sheetName } = req.params;
+
+        const file = await ExcelFile.findOne({
+            originFileId: fileId,
+            sheets: { $elemMatch: { sheetName } },
+        })
+            .select('sheets.$')
+            .lean();
+
+        if (!file || !file.sheets || !file.sheets.length) {
+            res.status(404).send('Sheet not found.');
+            return;
+        }
+
+        const rows = file.sheets[0].rows;
+        res.json(rows);
+    } catch (error: any) {
+        console.error('Error retrieving row data:', error);
+        res.status(500).send('Error retrieving row data: ' + error.message);
+    }
+};
 
 export const updateOrAddRowInSheet = async (
     req: Request,
