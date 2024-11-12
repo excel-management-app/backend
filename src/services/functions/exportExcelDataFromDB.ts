@@ -2,9 +2,14 @@ import * as ExcelJS from 'exceljs';
 import ExcelFile from '../../models/excelFile';
 import { RowData, Sheet } from '../types';
 import { getGridFsFileById } from './getGridFsFile';
+import path from 'path';
 
-const EXPORT_TEMPLATE_PATH = 'src/files/templates/export_template.xlsx';
-export const OUTPUT_FILE_PATH = process.env.OUTPUT_FILE_PATH || 'src/files/exports/';
+const EXPORT_TEMPLATE_PATH = path.join(
+    __dirname,
+    '../../files/templates/export_template.xlsx',
+);
+export const OUTPUT_FILE_PATH = path.join(__dirname, '../../files/exports/');
+
 export async function exportExcelDataFromDB({
     fileId,
     sheetName,

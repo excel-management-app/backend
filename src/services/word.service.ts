@@ -37,7 +37,7 @@ export const exportManytoWord = async (
             return;
         }
 
-        const sheet = await findSheetToUpdate(fileId, sheetName);
+        const sheet = await findSheetToUpdate({ fileId, sheetName });
 
         if (!sheet) {
             res.status(400).send('Sheet not found.');
@@ -107,6 +107,10 @@ export const exportManytoWord = async (
                     row.get('soHieuToBanDo') == soHieuToBanDo &&
                     row.get('soThuTuThua') == soThuTuThua,
             );
+            if (!dataDB) {
+                console.warn('Row not found.');
+                return;
+            }
             const nameFile =
                 dataDB.get('soHieuToBanDo') + '_' + dataDB.get('soThuTuThua');
             const type = dataDB.get('loaiDon');
@@ -164,8 +168,7 @@ export const exportManytoWord = async (
                     pathFileTemplate.trim() == ''
                 ) {
                     res.status(404).send(
-                         type ==
-                            'Cấp mới'
+                        type == 'Cấp mới'
                             ? 'Bạn chưa upload file template word mẫu đơn cấp mới'
                             : 'Bạn chưa upload file template word mẫu đơn cấp đổi',
                     );
@@ -224,7 +227,7 @@ export const exportOneToWord = async (
     try {
         const { fileId, sheetName, tamY } = req.params;
 
-        const sheet = await findSheetToUpdate(fileId, sheetName);
+        const sheet = await findSheetToUpdate({ fileId, sheetName, tamY });
 
         if (!tamY) {
             res.status(400).send('No row selected.');
@@ -305,8 +308,7 @@ export const exportOneToWord = async (
                 pathFileTemplate.trim() == ''
             ) {
                 res.status(404).send(
-                     type ==
-                        'Cấp mới'
+                    type == 'Cấp mới'
                         ? 'Bạn chưa upload file template word mẫu đơn cấp mới'
                         : 'Bạn chưa upload file template word mẫu đơn cấp đổi',
                 );

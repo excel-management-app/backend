@@ -1,10 +1,9 @@
-import MongoDB from '../../db';
+import fs from 'fs';
 import { GridFSBucket, ObjectId } from 'mongodb';
 import xlsx from 'xlsx';
+import MongoDB from '../../db';
 import ExcelFile from '../../models/excelFile';
-import fs from 'fs';
-import stream from 'stream';
-import { chunk } from 'lodash';
+import OriginFile from '../../models/originFile';
 
 const BATCH_SIZE = 3000; // Adjust based on your needs
 
@@ -15,7 +14,7 @@ export const insertExcelDataToDB = async (filePath: string): Promise<void> => {
         throw new Error('Failed to connect to the database');
     }
     const bucket = new GridFSBucket(db, {
-        bucketName: 'excelFiles',
+        bucketName: 'excelfiles',
     });
 
     try {
@@ -23,9 +22,7 @@ export const insertExcelDataToDB = async (filePath: string): Promise<void> => {
         const fileId = await uploadToGridFS(bucket, filePath);
 
         // Process the uploaded file
-        await processExcelFile(bucket, fileId, filePath);
-
-        console.log(`Successfully processed ${filePath}`);
+        await processExcelFile(bucket, fileId, filePath, db);
     } catch (error) {
         console.error('Error processing Excel file:', error);
         throw error;
@@ -51,86 +48,72 @@ async function processExcelFile(
     bucket: GridFSBucket,
     fileId: ObjectId,
     originalFilePath: string,
+    db: any,
 ): Promise<void> {
     const downloadStream = bucket.openDownloadStream(fileId);
-    const bufferStream = new stream.PassThrough();
-    downloadStream.pipe(bufferStream);
+    const buffer = await bufferStreamToBuffer(downloadStream);
 
-    const workbook = await new Promise<xlsx.WorkBook>((resolve, reject) => {
-        const buffers: Buffer[] = [];
-        bufferStream.on('data', (chunk) => buffers.push(chunk));
-        bufferStream.on('end', () => {
-            const buffer = Buffer.concat(buffers);
-            try {
-                const wb = xlsx.read(buffer, { type: 'buffer' });
-                resolve(wb);
-            } catch (error) {
-                // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
-                reject(error);
-            }
-        });
-        bufferStream.on('error', reject);
+    const workbook = xlsx.read(buffer, { type: 'buffer', dense: true });
+    const fileName = getFileName(originalFilePath);
+    const sheetNames = workbook.SheetNames;
+
+    await OriginFile.create({
+        gridFSId: fileId,
+        fileName,
+        sheetNames,
     });
 
-    const fileName = getFileName(originalFilePath);
     let totalRowsInserted = 0;
+    const excelFileCollection = db.collection('excelfiles');
 
-    for (const sheetName of workbook.SheetNames) {
+    for (const sheetName of sheetNames) {
         const worksheet = workbook.Sheets[sheetName];
-
         const jsonData: any[][] = xlsx.utils.sheet_to_json(worksheet, {
             header: 1,
             defval: '',
             blankrows: false,
         });
 
-        if (jsonData.length === 0) {
-            continue;
-        }
+        if (jsonData.length === 0) continue;
 
         const sheetHeaders = jsonData[0];
+        const headers = sheetHeaders.map(
+            (header, index) => header || jsonData[2][index],
+        );
 
-        // if header is empty, set header tov value of json data [2]
-        const headers = sheetHeaders.map((header, index) => {
-            if (header === '') {
-                return jsonData[2][index];
-            }
-            return header;
-        });
+        let sheetRows: any[] = [];
+        for (let i = 1; i < jsonData.length; i++) {
+            const row = jsonData[i];
+            if (!row.some((cell) => cell !== '')) continue;
 
-        const batches = chunk(jsonData.slice(1), BATCH_SIZE);
+            const rowObject: any = {};
+            headers.forEach((header, index) => {
+                rowObject[header] = row[index];
+            });
+            rowObject.tamY = `${rowObject.soHieuToBanDo}_${rowObject.soThuTuThua}`;
+            sheetRows.push(rowObject);
 
-        for (const batch of batches) {
-            const batchRows = batch
-                .filter((row) => row.some((cell) => cell !== ''))
-                .map((row) => {
-                    const rowObject: any = {};
-                    headers.forEach((header, index) => {
-                        rowObject[header] = row[index];
-                    });
-                    // insert tamY to rowObject if it is not exist
-                    rowObject.tamY = `${rowObject.soHieuToBanDo}_${rowObject.soThuTuThua}`;
-                    return rowObject;
-                });
-
-            if (batchRows.length > 0) {
-                const batchExcelFile = new ExcelFile({
-                    fileName,
-                    gridFSId: fileId,
-                    sheets: [
-                        {
-                            sheetName,
-                            headers,
-                            rows: batchRows,
+            if (sheetRows.length >= BATCH_SIZE || i === jsonData.length - 1) {
+                await excelFileCollection.bulkWrite([
+                    {
+                        insertOne: {
+                            document: {
+                                fileName,
+                                gridFSId: fileId,
+                                sheets: [
+                                    {
+                                        sheetName,
+                                        headers,
+                                        rows: sheetRows,
+                                    },
+                                ],
+                            },
                         },
-                    ],
-                });
+                    },
+                ]);
 
-                await batchExcelFile.save();
-                totalRowsInserted += batchRows.length;
-                console.log(
-                    `Inserted batch of ${batchRows.length} rows from sheet "${sheetName}"`,
-                );
+                totalRowsInserted += sheetRows.length;
+                sheetRows = []; // Clear batch to manage memory
             }
         }
     }
@@ -138,6 +121,17 @@ async function processExcelFile(
     if (totalRowsInserted === 0) {
         throw new Error('No valid data found in the Excel file');
     }
+}
+
+async function bufferStreamToBuffer(
+    stream: NodeJS.ReadableStream,
+): Promise<Buffer> {
+    const chunks: Buffer[] = [];
+    return new Promise((resolve, reject) => {
+        stream.on('data', (chunk) => chunks.push(chunk));
+        stream.on('end', () => resolve(Buffer.concat(chunks)));
+        stream.on('error', reject);
+    });
 }
 
 function getFileName(filePath: string): string {

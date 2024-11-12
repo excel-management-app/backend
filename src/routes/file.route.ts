@@ -1,17 +1,18 @@
 import express from 'express';
 import multer from 'multer';
 import {
-    uploadExcelFile,
-    getFileData,
-    getFiles,
-    exportWord,
-    exportManyWord,
-    uploadWordFile,
     exportFileBySheet,
-    getFileDataBySheetNameAndTamY,
-    updateOrAddRowInSheet,
-    uploadMapFile,
+    exportManyWord,
     exportMap,
+    exportWord,
+    getFileData,
+    searchDataByNameAndDate,
+    getFileDataBySheetNameAndTamY,
+    getFiles,
+    updateOrAddRowInSheet,
+    uploadExcelFile,
+    uploadMapFile,
+    uploadWordFile,
 } from '../services/file.service';
 import { checkAdminMiddleware } from '../middlewares/isAdmin';
 
@@ -53,13 +54,16 @@ fileRoute.get(
     '/:fileId/sheets/:sheetName/rows/:tamY',
     getFileDataBySheetNameAndTamY,
 );
+
+fileRoute.get('/:fileId/sheets/:sheetName/rows', searchDataByNameAndDate);
+
 fileRoute.post('/:fileId/sheets/:sheetName/rows', updateOrAddRowInSheet);
 
 fileRoute.get('/downloadWord/:tamY', exportWord);
 fileRoute.get('/downloadMap', exportMap);
 fileRoute.get('/:fileId/downloadManyWord', exportManyWord);
 fileRoute.get('/:fileId/sheets/:sheetName/export', exportFileBySheet);
+fileRoute.get('/:fileId/sheets/:sheetName', getFileData);
 fileRoute.get('/:fileId/downloadWord', exportWord);
-fileRoute.get('/:fileId', getFileData);
 
 fileRoute.get('/', getFiles);
