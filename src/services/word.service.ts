@@ -107,6 +107,10 @@ export const exportManytoWord = async (
                     row.get('soHieuToBanDo') == soHieuToBanDo &&
                     row.get('soThuTuThua') == soThuTuThua,
             );
+            if (!dataDB) {
+                console.warn('Row not found.');
+                return;
+            }
             const nameFile =
                 dataDB.get('soHieuToBanDo') + '_' + dataDB.get('soThuTuThua');
             const type = dataDB.get('loaiDon');
