@@ -228,33 +228,6 @@ export const getFileData = async (
     }
 };
 
-export const getAllRowsBySheetName = async (
-    req: Request,
-    res: Response,
-): Promise<void> => {
-    try {
-        const { fileId, sheetName } = req.params;
-
-        const file = await ExcelFile.findOne({
-            gridFSId: fileId,
-            sheets: { $elemMatch: { sheetName } },
-        })
-            .select('sheets.$')
-            .lean();
-
-        if (!file || !file.sheets || !file.sheets.length) {
-            res.status(404).send('Sheet not found.');
-            return;
-        }
-
-        const rows = file.sheets[0].rows;
-        res.json(rows);
-    } catch (error: any) {
-        console.error('Error retrieving row data:', error);
-        res.status(500).send('Error retrieving row data: ' + error.message);
-    }
-};
-
 export const getFiles = async (_req: Request, res: Response) => {
     try {
         // Fetch files OriginFile
@@ -273,7 +246,7 @@ export const getFiles = async (_req: Request, res: Response) => {
     }
 };
 
-export const searchDataByName = async (
+export const searchDataByNameAndDate = async (
     req: Request,
     res: Response,
 ): Promise<void> => {
@@ -282,10 +255,14 @@ export const searchDataByName = async (
         const { name, date } = req.query;
 
         const rowConditions: any = {};
-        if (name) rowConditions['hoTen'] =  { $regex: name, $options: 'i' };
-        if (date) rowConditions['namSinh'] = date;
+        if (name) {
+            rowConditions['hoTen'] = { $regex: name, $options: 'i' };
+        }
+        if (date) {
+            rowConditions['namSinh'] = date;
+        }
 
-        if(name === "" && date === "") {
+        if (name === '' && date === '') {
             res.status(200).send('Chưa nhập dữ liệu tìm kiếm');
             return;
         }
@@ -310,7 +287,9 @@ export const searchDataByName = async (
         }
 
         const rows = file.sheets[0].rows.filter((r: any) => {
-            const matchesName = name ? new RegExp(name.toString(), 'i').test(r.hoTen) : true;
+            const matchesName = name
+                ? new RegExp(String(name), 'i').test(r.hoTen)
+                : true;
             const matchesDate = date ? r.namSinh === date : true;
             return matchesName && matchesDate;
         });
@@ -325,7 +304,6 @@ export const searchDataByName = async (
         res.status(500).send('Error find data: ' + error.message);
     }
 };
-
 
 export const getFileDataBySheetNameAndTamY = async (
     req: Request,

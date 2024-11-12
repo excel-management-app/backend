@@ -5,15 +5,14 @@ import {
     exportManyWord,
     exportMap,
     exportWord,
-    getAllRowsBySheetName,
     getFileData,
-    searchDataByName,
+    searchDataByNameAndDate,
     getFileDataBySheetNameAndTamY,
     getFiles,
     updateOrAddRowInSheet,
     uploadExcelFile,
     uploadMapFile,
-    uploadWordFile
+    uploadWordFile,
 } from '../services/file.service';
 import { checkAdminMiddleware } from '../middlewares/isAdmin';
 
@@ -56,10 +55,7 @@ fileRoute.get(
     getFileDataBySheetNameAndTamY,
 );
 
-fileRoute.get(
-    '/:fileId/sheets/:sheetName/rows',
-    searchDataByName,
-);
+fileRoute.get('/:fileId/sheets/:sheetName/rows', searchDataByNameAndDate);
 
 fileRoute.post('/:fileId/sheets/:sheetName/rows', updateOrAddRowInSheet);
 
@@ -67,7 +63,6 @@ fileRoute.get('/downloadWord/:tamY', exportWord);
 fileRoute.get('/downloadMap', exportMap);
 fileRoute.get('/:fileId/downloadManyWord', exportManyWord);
 fileRoute.get('/:fileId/sheets/:sheetName/export', exportFileBySheet);
-fileRoute.get('/:fileId/sheets/:sheetName/all', getAllRowsBySheetName);
 fileRoute.get('/:fileId/sheets/:sheetName', getFileData);
 fileRoute.get('/:fileId/downloadWord', exportWord);
 
