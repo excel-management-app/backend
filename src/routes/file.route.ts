@@ -7,6 +7,7 @@ import {
     exportWord,
     getAllRowsBySheetName,
     getFileData,
+    searchDataByName,
     getFileDataBySheetNameAndTamY,
     getFiles,
     updateOrAddRowInSheet,
@@ -54,6 +55,12 @@ fileRoute.get(
     '/:fileId/sheets/:sheetName/rows/:tamY',
     getFileDataBySheetNameAndTamY,
 );
+
+fileRoute.get(
+    '/:fileId/sheets/:sheetName/rows',
+    searchDataByName,
+);
+
 fileRoute.post('/:fileId/sheets/:sheetName/rows', updateOrAddRowInSheet);
 
 fileRoute.get('/downloadWord/:tamY', exportWord);
