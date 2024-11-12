@@ -37,7 +37,7 @@ export const exportManytoWord = async (
             return;
         }
 
-        const sheet = await findSheetToUpdate(fileId, sheetName);
+        const sheet = await findSheetToUpdate({ fileId, sheetName });
 
         if (!sheet) {
             res.status(400).send('Sheet not found.');
@@ -227,7 +227,7 @@ export const exportOneToWord = async (
     try {
         const { fileId, sheetName, tamY } = req.params;
 
-        const sheet = await findSheetToUpdate(fileId, sheetName);
+        const sheet = await findSheetToUpdate({ fileId, sheetName, tamY });
 
         if (!tamY) {
             res.status(400).send('No row selected.');

@@ -1,11 +1,29 @@
 import ExcelFile from '../../models/excelFile';
 
-export const findSheetToUpdate = async (fileId: string, sheetName: string) => {
+interface Props {
+    fileId: string;
+    sheetName: string;
+    tamY?: string;
+}
+
+export const findSheetToUpdate = async ({ fileId, sheetName, tamY }: Props) => {
     try {
-        const file = await ExcelFile.findOne({
+        const query: any = {
             gridFSId: fileId,
-            sheets: { $elemMatch: { sheetName } },
-        });
+            sheets: {
+                $elemMatch: {
+                    sheetName,
+                },
+            },
+        };
+        if (tamY) {
+            query.sheets.$elemMatch.rows = {
+                $elemMatch: {
+                    tamY,
+                },
+            };
+        }
+        const file = await ExcelFile.findOne(query);
 
         const sheet = file?.sheets[0];
 
