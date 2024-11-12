@@ -67,10 +67,10 @@ async function connectToMongoDB() {
     await MongoDB.getInstance().connect();
     await initAdminAccount();
 }
-// Schedule a cron job to run every 5 minutes
+// Schedule a cron job to run every 15 minutes
 const EXPORT_DIR = path.join(__dirname, 'files/exports');
-const TEMPLATE_DIR = path.join(__dirname, 'files/templates');
-cron.schedule('*/5 * * * *', () => {
+
+cron.schedule('*/15 * * * *', () => {
     console.log('Running file deletion task...');
     deleteFilesFromExportDir(EXPORT_DIR);
 });

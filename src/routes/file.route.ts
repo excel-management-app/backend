@@ -59,7 +59,7 @@ fileRoute.get('/downloadWord/:tamY', exportWord);
 fileRoute.get('/downloadMap', exportMap);
 fileRoute.get('/:fileId/downloadManyWord', exportManyWord);
 fileRoute.get('/:fileId/sheets/:sheetName/export', exportFileBySheet);
+fileRoute.get('/:fileId/sheets/:sheetName', getFileData);
 fileRoute.get('/:fileId/downloadWord', exportWord);
-fileRoute.get('/:fileId', getFileData);
 
 fileRoute.get('/', getFiles);

@@ -21,7 +21,12 @@ class MongoDB {
         }
 
         try {
-            const db = await mongoose.connect(this.mongoURI);
+            const db = await mongoose.connect(this.mongoURI, {
+                minPoolSize: 5,
+                maxPoolSize: 20,
+                w: 'majority',
+                wtimeoutMS: 2000,
+            });
             this.dbConnection = db.connection;
             console.log('MongoDB connected');
             return this.dbConnection;
