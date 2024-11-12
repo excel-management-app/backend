@@ -236,7 +236,7 @@ export const getAllRowsBySheetName = async (
         const { fileId, sheetName } = req.params;
 
         const file = await ExcelFile.findOne({
-            originFileId: fileId,
+            gridFSId: fileId,
             sheets: { $elemMatch: { sheetName } },
         })
             .select('sheets.$')
