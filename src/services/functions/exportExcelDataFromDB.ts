@@ -1,8 +1,8 @@
 import * as ExcelJS from 'exceljs';
-import ExcelFile from '../../models/excelFile';
-import { RowData, Sheet } from '../types';
-import { getGridFsFileById } from './getGridFsFile';
 import path from 'path';
+import ExcelFile from '../../models/excelFile';
+import { convertIndexedStyles } from '../../utils/exceljs';
+import { RowData } from '../types';
 
 const EXPORT_TEMPLATE_PATH = path.join(
     __dirname,
@@ -18,87 +18,87 @@ export async function exportExcelDataFromDB({
     sheetName: string;
 }) {
     try {
-        const gridFsFile = await getGridFsFileById(fileId);
-        if (!gridFsFile) {
-            throw new Error('File not found');
-        }
-        const files = await ExcelFile.find({ fileName: gridFsFile.filename });
+        const files = await ExcelFile.find({
+            gridFSId: fileId,
+            sheets: { $elemMatch: { sheetName: sheetName } },
+        }).lean();
         if (!files.length) {
             throw new Error('File not found');
         }
 
-        const workbook = new ExcelJS.Workbook();
-        await workbook.xlsx.readFile(EXPORT_TEMPLATE_PATH);
+        const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+            filename: `${OUTPUT_FILE_PATH}exported_file_${fileId}_${sheetName}.xlsx`,
+            useStyles: true,
+        });
 
-        const allFileSheets = files.flatMap((file) => file.sheets);
-        // combine all sheet with the same name from all files
+        const combinedRows: RowData[] = [];
+        files.forEach((file) => {
+            combinedRows.push(...(file.sheets[0].rows as unknown as RowData[]));
+        });
 
-        const combinedSheets = allFileSheets.reduce<Sheet[]>((acc, sheet) => {
-            const existingSheet = acc.find(
-                ({ sheetName }) => sheetName === sheet.sheetName,
-            );
-            if (existingSheet) {
-                existingSheet.rows = existingSheet.rows.concat(
-                    sheet.rows.toObject(),
-                );
-                return acc;
-            }
-            return acc.concat({
-                sheetName: sheet.sheetName as string,
-                rows: sheet.rows.toObject() as RowData[],
-            });
-        }, []);
-
-        const sheetToExport = combinedSheets.find(
-            (sheet) => sheet.sheetName === sheetName,
-        );
-        if (!sheetToExport) {
-            throw new Error('Sheet not found in the template.');
-        }
-        const worksheet = workbook.getWorksheet(1);
-
-        if (!worksheet) {
-            throw new Error(`Sheet not found in the template.`);
-        }
-
-        const rows: RowData[] = sheetToExport.rows as unknown as RowData[];
-
-        const headerRow = worksheet.getRow(1); // Assuming header is in the first row
-        const startRow = worksheet.actualRowCount + 1; // Start after the last row of the template
+        const worksheet = workbook.addWorksheet(sheetName);
 
         const templateHeaders: string[] = [];
-        headerRow.eachCell((cell) => {
+        const templateWorkbook = new ExcelJS.Workbook();
+        await templateWorkbook.xlsx.readFile(EXPORT_TEMPLATE_PATH);
+        const templateWorksheet = templateWorkbook.getWorksheet(1);
+
+        if (!templateWorksheet) {
+            throw new Error('Template worksheet not found');
+        }
+
+        // Store template styles for each row
+        const templateStyles = Array.from({ length: 4 }, (_, idx) => {
+            const rowIndex = idx + 1;
+            const rowStyles: any = {};
+            templateWorksheet.getRow(rowIndex).eachCell((cell, colIndex) => {
+                rowStyles[colIndex] = convertIndexedStyles(cell);
+            });
+            return rowStyles;
+        });
+
+        // Add headers and apply template styles
+        const headerRow = worksheet.addRow([]);
+        templateWorksheet.getRow(1).eachCell((cell, colIndex) => {
             if (cell.value) {
-                templateHeaders.push(String(cell.value)); // Push into templateHeaders instead of headers
+                templateHeaders.push(String(cell.value));
+                const headerCell = headerRow.getCell(colIndex);
+                headerCell.value = cell.value;
+                headerCell.style = templateStyles[0][colIndex];
             }
         });
+        headerRow.commit();
 
-        rows.splice(3).forEach((rowData: any, rowIndex: number) => {
-            const newRow = worksheet.getRow(startRow + rowIndex);
-
+        // Write first 3 rows with template styles
+        combinedRows.slice(0, 3).forEach((rowData: any, rowIndex) => {
+            const row = worksheet.addRow([]);
             templateHeaders.forEach((header, colIndex) => {
-                const cell = newRow.getCell(colIndex + 1); // ExcelJS columns are 1-based
-
-                // Set the value from MongoDB data corresponding to the header
-                cell.value = rowData.get(header);
-
-                //  Copy style from the corresponding template header row (or any styled row)
-                const templateCell = headerRow.getCell(colIndex + 1); // Copy style from the header row
-                if (templateCell && templateCell.style) {
-                    cell.style = templateCell.style; // Copy the style from the template cell
-                }
-                cell.border = {
-                    top: { style: 'thin' },
-                    left: { style: 'thin' },
-                    bottom: { style: 'thin' },
-                    right: { style: 'thin' },
-                };
+                const cell = row.getCell(colIndex + 1);
+                cell.value = rowData[header];
+                cell.style = templateStyles[rowIndex + 1][colIndex + 1] || {};
             });
+            row.commit();
         });
 
-        await workbook.xlsx.writeFile(
-            `${OUTPUT_FILE_PATH}exported_file_${fileId}_${sheetName}.xlsx`,
-        );
+        combinedRows.slice(3).forEach((rowData: any) => {
+            const row = worksheet.addRow([]);
+            templateHeaders.forEach((header, colIndex) => {
+                const cell = row.getCell(colIndex + 1);
+                cell.value = rowData[header];
+                cell.style = {
+                    border: {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' },
+                    },
+                };
+            });
+            row.commit();
+        });
+
+        worksheet.commit();
+        await workbook.commit();
     } catch (error) {
         console.error(error);
         throw error;

@@ -2,7 +2,6 @@ import fs from 'fs';
 import { GridFSBucket, ObjectId } from 'mongodb';
 import xlsx from 'xlsx';
 import MongoDB from '../../db';
-import ExcelFile from '../../models/excelFile';
 import OriginFile from '../../models/originFile';
 
 const BATCH_SIZE = 3000; // Adjust based on your needs
@@ -74,7 +73,9 @@ async function processExcelFile(
             blankrows: false,
         });
 
-        if (jsonData.length === 0) continue;
+        if (jsonData.length === 0) {
+            continue;
+        }
 
         const sheetHeaders = jsonData[0];
         const headers = sheetHeaders.map(
@@ -84,7 +85,9 @@ async function processExcelFile(
         let sheetRows: any[] = [];
         for (let i = 1; i < jsonData.length; i++) {
             const row = jsonData[i];
-            if (!row.some((cell) => cell !== '')) continue;
+            if (!row.some((cell) => cell !== '')) {
+                continue;
+            }
 
             const rowObject: any = {};
             headers.forEach((header, index) => {

@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 const sheetSchema = new mongoose.Schema({
-    sheetName: String,
+    sheetName: { type: String, index: true },
     headers: [String],
     rows: [
         {
@@ -30,6 +30,7 @@ const excelFileSchema = new mongoose.Schema({
 
 // Ensure index creation
 excelFileSchema.index({ gridFSId: 1 });
+excelFileSchema.index({ 'sheets.sheetName': 1 });
 
 const ExcelFile = mongoose.model('ExcelFile', excelFileSchema);
 
