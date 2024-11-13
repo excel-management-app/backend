@@ -3,7 +3,6 @@ import compression from 'compression';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
-import fs from 'fs';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import cron from 'node-cron';
@@ -15,6 +14,8 @@ import { appRouter } from './routes/index';
 // load .env
 dotenv.config();
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(
@@ -23,8 +24,10 @@ app.use(
     }),
 );
 
-// use morgan
-app.use(morgan('combined'));
+if (!isProduction) {
+    // use morgan
+    app.use(morgan('combined'));
+}
 // use compression
 app.use(compression());
 
