@@ -1,11 +1,11 @@
 import fs from 'fs';
 import { GridFSBucket, ObjectId } from 'mongodb';
 import xlsx from 'xlsx';
+import { chunk } from 'lodash';
 import MongoDB from '../../db';
-import ExcelFile from '../../models/excelFile';
 import OriginFile from '../../models/originFile';
 
-const BATCH_SIZE = 3000; // Adjust based on your needs
+const BATCH_SIZE = 5000;
 
 export const insertExcelDataToDB = async (filePath: string): Promise<void> => {
     const mongoInstance = MongoDB.getInstance();
@@ -72,49 +72,53 @@ async function processExcelFile(
             header: 1,
             defval: '',
             blankrows: false,
+            raw: true, // raw data nhanh hơn
         });
 
-        if (jsonData.length === 0) continue;
+        if (jsonData.length === 0) {
+            continue;
+        }
 
-        const sheetHeaders = jsonData[0];
-        const headers = sheetHeaders.map(
+        const headers = jsonData[0].map(
             (header, index) => header || jsonData[2][index],
         );
 
-        let sheetRows: any[] = [];
-        for (let i = 1; i < jsonData.length; i++) {
-            const row = jsonData[i];
-            if (!row.some((cell) => cell !== '')) continue;
-
-            const rowObject: any = {};
-            headers.forEach((header, index) => {
-                rowObject[header] = row[index];
+        // Transform raw data into row objects
+        const rowObjects = jsonData
+            .slice(1)
+            .filter((row) => row.some((cell) => cell !== ''))
+            .map((row) => {
+                const rowObject: Record<string, any> = {};
+                headers.forEach((header, index) => {
+                    if (row[index] !== '') {
+                        rowObject[header] = row[index];
+                    }
+                });
+                rowObject.tamY = `${rowObject.soHieuToBanDo}_${rowObject.soThuTuThua}`;
+                return rowObject;
             });
-            rowObject.tamY = `${rowObject.soHieuToBanDo}_${rowObject.soThuTuThua}`;
-            sheetRows.push(rowObject);
 
-            if (sheetRows.length >= BATCH_SIZE || i === jsonData.length - 1) {
-                await excelFileCollection.bulkWrite([
-                    {
-                        insertOne: {
-                            document: {
-                                fileName,
-                                gridFSId: fileId,
-                                sheets: [
-                                    {
-                                        sheetName,
-                                        headers,
-                                        rows: sheetRows,
-                                    },
-                                ],
+        // Chunk rows into batches for bulk insert
+        const rowChunks = chunk(rowObjects, BATCH_SIZE);
+        for (const rowChunk of rowChunks) {
+            const bulkOperator = {
+                insertOne: {
+                    document: {
+                        fileName,
+                        gridFSId: fileId,
+                        sheets: [
+                            {
+                                sheetName,
+                                headers,
+                                rows: rowChunk,
                             },
-                        },
+                        ],
                     },
-                ]);
+                },
+            };
 
-                totalRowsInserted += sheetRows.length;
-                sheetRows = []; // Clear batch to manage memory
-            }
+            await excelFileCollection.bulkWrite([bulkOperator]);
+            totalRowsInserted += rowChunk.length;
         }
     }
 
