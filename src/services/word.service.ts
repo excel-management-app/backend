@@ -189,9 +189,6 @@ export const exportManytoWord = async (
             const zip = new PizZip(content);
             const doc = new Docxtemplater(zip, {
                 nullGetter: (part) => {
-                    console.warn(
-                        `Không tìm thấy dữ liệu cho placeholder: ${part.value}`,
-                    );
                     return ''; // Trả về chuỗi rỗng nếu không tìm thấy dữ liệu
                 },
             });
