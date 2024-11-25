@@ -9,7 +9,6 @@ import {} from 'lodash';
 import { LocalStorage } from 'node-localstorage';
 import path from 'path';
 import PizZip from 'pizzip';
-import ExcelFile from '../models/excelFile';
 import Statistic from '../models/statistic';
 import { LOAI_DAT } from '../utils/formFields';
 import { OUTPUT_FILE_PATH } from './functions/exportExcelDataFromDB';
@@ -18,7 +17,10 @@ import { getAccountIdFromHeader } from './functions/getAccountIdFromHeader';
 
 global.localStorage = new LocalStorage('./scratch');
 
-function getLandDescription(code: string) {
+function getLandDescription(code: string | undefined): string {
+    if (!code) {
+        return '';
+    }
     const description = LOAI_DAT[code.toUpperCase()];
     return description ? description : '';
 }
