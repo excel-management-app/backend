@@ -13,6 +13,7 @@ import {
     uploadExcelFile,
     uploadMapFile,
     uploadWordFile,
+    deleteFile,
 } from '../services/file.service';
 import { checkAdminMiddleware } from '../middlewares/isAdmin';
 
@@ -65,5 +66,6 @@ fileRoute.get('/:fileId/downloadManyWord', exportManyWord);
 fileRoute.get('/:fileId/sheets/:sheetName/export', exportFileBySheet);
 fileRoute.get('/:fileId/sheets/:sheetName', getFileData);
 fileRoute.get('/:fileId/downloadWord', exportWord);
+fileRoute.delete('/:fileId/delete', deleteFile);
 
 fileRoute.get('/', getFiles);
