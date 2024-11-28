@@ -21,9 +21,8 @@ note.txt
 .vercel
 
 
-scratch/templateWord
-scratch/wordCapDoi
-scratch/wordCapMoi
+scratch/
+
 
 src/files/exports/
 src/files/templates/
