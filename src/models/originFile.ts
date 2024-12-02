@@ -11,6 +11,8 @@ const originFileSchema = new mongoose.Schema({
         index: true,
         comment: 'Reference to the GridFS file',
     },
+    // soft delete
+    deletedAt: { type: Date, default: null },
 });
 
 const OriginFile = mongoose.model('OriginFile', originFileSchema);
