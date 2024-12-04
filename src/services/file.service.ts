@@ -16,6 +16,7 @@ import { insertExcelDataToDB } from './functions/insertExcelDataToDB';
 import MongoDB from '../db';
 import fs from 'fs';
 import { mapFileResult } from './functions/mapFileResult';
+import path from 'path';
 
 global.localStorage = new LocalStorage('./scratch');
 
@@ -43,7 +44,8 @@ export const uploadExcelFile = async (
     }
 };
 
-export const uploadWordFile = (req: Request, res: Response) => {
+
+export const uploadWordFile = async (req: Request, res: Response) => {
     try {
         if (!req.file) {
             res.status(400).send('No file uploaded.');
@@ -53,13 +55,22 @@ export const uploadWordFile = (req: Request, res: Response) => {
         const typeFile = req.body.type;
 
         const filePath = req.file.path;
-
+        var oldFile;
+            
         if (typeFile.toString() == '1') {
+            oldFile = global.localStorage.getItem('wordCapMoi');
             global.localStorage.setItem('wordCapMoi', filePath);
         }
         if (typeFile.toString() == '2') {
+            oldFile = global.localStorage.getItem('wordCapDoi');
             global.localStorage.setItem('wordCapDoi', filePath);
         }
+        // xóa file cũ khi up mới
+        const folderPath = path.resolve(oldFile ? oldFile: "");
+        if (fs.existsSync(folderPath)) {
+            await fs.promises.rm(folderPath, { recursive: true, force: true });
+        }
+
         // Insert the Excel file into the database
         res.status(200).send({
             message: 'File successfully processed and data inserted.',
