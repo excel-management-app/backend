@@ -153,7 +153,7 @@ export const exportManytoWord = async (
             // in ra ho gia dinh
             dataDB.set(
                 'hoGiaDinh',
-                dataDB.get('hoGiaDinh') == "ho" ? 'Hộ' : '',
+                dataDB.get('hoGiaDinh') == 'ho' ? 'Hộ' : '',
             );
 
             const dataToWord = dataDB.toJSON();
@@ -296,9 +296,8 @@ export const exportOneToWord = async (
         // in ra ho gia dinh
         dataExport.set(
             'hoGiaDinh',
-            dataExport.get('hoGiaDinh') == "ho" ? 'Hộ' : '',
+            dataExport.get('hoGiaDinh') == 'ho' ? 'Hộ' : '',
         );
-
 
         const dataToWord = dataExport.toJSON();
 

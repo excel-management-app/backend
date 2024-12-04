@@ -17,6 +17,8 @@ import MongoDB from '../db';
 import fs from 'fs';
 import { mapFileResult } from './functions/mapFileResult';
 import path from 'path';
+import { chunk } from 'lodash';
+import { ROW_BATCH_SIZE } from './consts';
 
 global.localStorage = new LocalStorage('./scratch');
 
@@ -44,7 +46,6 @@ export const uploadExcelFile = async (
     }
 };
 
-
 export const uploadWordFile = async (req: Request, res: Response) => {
     try {
         if (!req.file) {
@@ -55,8 +56,8 @@ export const uploadWordFile = async (req: Request, res: Response) => {
         const typeFile = req.body.type;
 
         const filePath = req.file.path;
-        var oldFile;
-            
+        let oldFile;
+
         if (typeFile.toString() == '1') {
             oldFile = global.localStorage.getItem('wordCapMoi');
             global.localStorage.setItem('wordCapMoi', filePath);
@@ -66,7 +67,7 @@ export const uploadWordFile = async (req: Request, res: Response) => {
             global.localStorage.setItem('wordCapDoi', filePath);
         }
         // xóa file cũ khi up mới
-        const folderPath = path.resolve(oldFile ? oldFile: "");
+        const folderPath = path.resolve(oldFile ? oldFile : '');
         if (fs.existsSync(folderPath)) {
             await fs.promises.rm(folderPath, { recursive: true, force: true });
         }
@@ -505,5 +506,56 @@ export const restoreFile = async (req: Request, res: Response) => {
     } catch (error) {
         console.error('Error restoring file:', error);
         res.status(500).send('Error restoring file.');
+    }
+};
+
+// bulkInsertRows
+export const bulkInsertRows = async (req: Request, res: Response) => {
+    try {
+        const { fileId, sheetName } = req.params;
+        const newRows = req.body.data;
+
+        // Chunk rows into batches for bulk insert
+        const rowChunks = chunk(newRows, ROW_BATCH_SIZE);
+        for (const rowChunk of rowChunks) {
+            for (const newRow of rowChunk) {
+                const tamY = `${(newRow as any).soHieuToBanDo}_${(newRow as any).soThuTuThua}`;
+                const files = await getFileDataByFileId(fileId);
+                const { fileToUpdate, sheetToUpdate, rowIndexToUpdate } =
+                    checkRowExist({
+                        files,
+                        sheetName,
+                        tamY,
+                    });
+
+                if (fileToUpdate && sheetToUpdate && rowIndexToUpdate !== -1) {
+                    // Replace existing row
+                    await ExcelFile.bulkWrite([
+                        {
+                            updateOne: {
+                                filter: {
+                                    _id: fileToUpdate._id,
+                                    'sheets.sheetName': sheetName,
+                                },
+                                update: {
+                                    $set: { 'sheets.$.rows.$[row]': newRow },
+                                },
+                                arrayFilters: [{ 'row.tamY': tamY }],
+                            },
+                        },
+                    ]);
+                } else {
+                    // Insert new row
+                    await ExcelFile.updateOne(
+                        { gridFSId: fileId, 'sheets.sheetName': sheetName },
+                        { $push: { 'sheets.$.rows': newRow } },
+                    );
+                }
+            }
+        }
+        res.status(200).send('Rows inserted successfully.');
+    } catch (error) {
+        console.error('Error bulk inserting rows:', error);
+        res.status(500).send('Error bulk inserting rows.');
     }
 };

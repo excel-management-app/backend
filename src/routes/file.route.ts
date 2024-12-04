@@ -17,6 +17,7 @@ import {
     getDeletedFiles,
     restoreFile,
     permanentlyDeleteFile,
+    bulkInsertRows,
 } from '../services/file.service';
 import { checkAdminMiddleware } from '../middlewares/isAdmin';
 
@@ -62,6 +63,8 @@ fileRoute.get(
 fileRoute.get('/:fileId/sheets/:sheetName/rows', searchDataByNameAndDate);
 
 fileRoute.post('/:fileId/sheets/:sheetName/rows', updateOrAddRowInSheet);
+// bulk insert
+fileRoute.post('/:fileId/sheets/:sheetName/rows/bulk', bulkInsertRows);
 
 fileRoute.get('/downloadWord/:tamY', exportWord);
 fileRoute.get('/downloadMap', exportMap);
