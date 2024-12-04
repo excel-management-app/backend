@@ -20,6 +20,7 @@ import {
     bulkInsertRows,
 } from '../services/file.service';
 import { checkAdminMiddleware } from '../middlewares/isAdmin';
+import { authenticateJWT } from '../middlewares/authenticateJWT';
 
 const storage = multer.diskStorage({
     destination: function (_req, _file, cb) {
@@ -36,6 +37,7 @@ export const fileRoute = express.Router();
 
 fileRoute.post(
     '/upload',
+    authenticateJWT,
     checkAdminMiddleware,
     upload.single('file'),
     uploadExcelFile,
@@ -43,6 +45,7 @@ fileRoute.post(
 
 fileRoute.post(
     '/uploadTemplateWord',
+    authenticateJWT,
     checkAdminMiddleware,
     upload.single('file'),
     uploadWordFile,
@@ -50,6 +53,7 @@ fileRoute.post(
 
 fileRoute.post(
     '/uploadTemplateMapFile',
+    authenticateJWT,
     checkAdminMiddleware,
     upload.single('file'),
     uploadMapFile,
@@ -72,11 +76,31 @@ fileRoute.get('/:fileId/downloadManyWord', exportManyWord);
 fileRoute.get('/:fileId/sheets/:sheetName/export', exportFileBySheet);
 fileRoute.get('/:fileId/sheets/:sheetName', getFileData);
 fileRoute.get('/:fileId/downloadWord', exportWord);
-fileRoute.put('/:fileId/delete', deleteFile);
+fileRoute.put(
+    '/:fileId/delete',
+    authenticateJWT,
+    checkAdminMiddleware,
+    deleteFile,
+);
 // permanentlyDeleteFile
-fileRoute.delete('/:fileId/delete', permanentlyDeleteFile);
+fileRoute.delete(
+    '/:fileId/delete',
+    authenticateJWT,
+    checkAdminMiddleware,
+    permanentlyDeleteFile,
+);
 // restoreFile
-fileRoute.put('/:fileId/restore', restoreFile);
+fileRoute.put(
+    '/:fileId/restore',
+    authenticateJWT,
+    checkAdminMiddleware,
+    restoreFile,
+);
 
-fileRoute.get('/deleted', getDeletedFiles);
+fileRoute.get(
+    '/deleted',
+    authenticateJWT,
+    checkAdminMiddleware,
+    getDeletedFiles,
+);
 fileRoute.get('/', getFiles);

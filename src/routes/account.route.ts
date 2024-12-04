@@ -5,15 +5,24 @@ import {
     getAllAccounts,
     login,
     updateAccount,
+    logOut,
 } from '../services/account.service';
+import { checkAdminMiddleware } from '../middlewares/isAdmin';
+import { authenticateJWT } from '../middlewares/authenticateJWT';
 
 export const accountRoute = express.Router();
 
 accountRoute.post('/signup', createAccount);
 accountRoute.post('/login', login);
+accountRoute.post('/logout', authenticateJWT, logOut);
 
-accountRoute.get('/getAll/:date', getAllAccounts);
+accountRoute.get(
+    '/getAll/:date',
+    authenticateJWT,
+    checkAdminMiddleware,
+    getAllAccounts,
+);
 
-accountRoute.put('/', updateAccount);
+accountRoute.get('/me', authenticateJWT, getAccount);
 
-accountRoute.get('/', getAccount);
+accountRoute.put('/', authenticateJWT, updateAccount);

@@ -1,9 +1,12 @@
-import { Request, Response } from 'express';
-import AccountModel from '../models/account';
 import bcrypt from 'bcrypt';
-import { getAccountIdFromHeader } from './functions/getAccountIdFromHeader';
+import { Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
+import { addTokenToBlacklist } from '../middlewares/authenticateJWT';
+import { default as Account, default as AccountModel } from '../models/account';
 import Statistic from '../models/statistic';
-import Account from '../models/account';
+import { AuthenticatedRequest } from './types';
+
+export const SECRET_KEY = process.env.SECRET_KEY || 'secret';
 
 export const createAccount = async (req: Request, res: Response) => {
     try {
@@ -21,11 +24,15 @@ export const createAccount = async (req: Request, res: Response) => {
             createdDate: new Date(),
         });
 
+        const token = jwt.sign(
+            { id: newAccount._id, role: newAccount.role },
+            SECRET_KEY,
+            { expiresIn: '30d' },
+        );
+
         res.status(200).json({
             data: {
-                _id: newAccount._id,
-                name: newAccount.name,
-                role: newAccount.role,
+                token,
             },
         });
     } catch (error: any) {
@@ -35,25 +42,28 @@ export const createAccount = async (req: Request, res: Response) => {
 
 export const getAccount = async (req: Request, res: Response) => {
     try {
-        const id = getAccountIdFromHeader(req);
+        const accountId = (req as AuthenticatedRequest).user?.id;
 
-        if (!id) {
-            res.status(401).send('Không có quyền ');
-            return;
+        if (!accountId) {
+            res.status(404).send('AccountId not found');
         }
-        const account = await AccountModel.findOne({ id });
+        const account = await AccountModel.findById(accountId)
+            .select('_id name role')
+            .lean();
+        if (!account) {
+            res.status(404).send('Account not found');
+        }
 
         res.status(200).json({
             data: {
-                _id: account?._id,
-                name: account?.name,
-                role: account?.role,
+                ...account,
             },
         });
     } catch (error) {
         res.status(500).send(error);
     }
 };
+
 export const login = async (req: Request, res: Response) => {
     try {
         const { name, password } = req.body.data;
@@ -69,11 +79,15 @@ export const login = async (req: Request, res: Response) => {
             return;
         }
 
+        const token = jwt.sign(
+            { id: account._id, role: account.role },
+            SECRET_KEY,
+            { expiresIn: '30d' },
+        );
+
         res.status(200).json({
             data: {
-                _id: account._id,
-                name: account.name,
-                role: account.role,
+                token,
             },
         });
     } catch (error) {
@@ -82,7 +96,7 @@ export const login = async (req: Request, res: Response) => {
 };
 
 export const getAllAccounts = (req: Request, res: Response) => {
-    const accountId = getAccountIdFromHeader(req);
+    const accountId = (req as AuthenticatedRequest).user?.id;
     if (!accountId) {
         res.status(401).send('Unauthorized');
         return;
@@ -132,7 +146,7 @@ export const getAllAccounts = (req: Request, res: Response) => {
 
 export const updateAccount = async (req: Request, res: Response) => {
     try {
-        const accountId = getAccountIdFromHeader(req);
+        const accountId = (req as AuthenticatedRequest).user?.id;
         if (!accountId) {
             res.status(401).send('Không có quyền ');
             return;
@@ -168,11 +182,27 @@ export const updateAccount = async (req: Request, res: Response) => {
     }
 };
 
+export const logOut = (req: Request, res: Response) => {
+    try {
+        const token = req.header('Authorization')?.replace('Bearer ', '');
+        if (!token) {
+            res.status(401).send('Unauthorized');
+            return;
+        }
+
+        addTokenToBlacklist(token);
+        res.status(200).send('Logged out successfully');
+    } catch (error) {
+        res.status(500).send(error);
+    }
+};
+
 const hashPassword = async (password: string) => {
     const saltRounds = 10;
     return await bcrypt.hash(password, saltRounds);
 };
 
 const isExistAccount = async (name: string) => {
-    return await AccountModel.exists({ name });
+    const account = await AccountModel.findOne({ name });
+    return account ? true : false;
 };
