@@ -14,6 +14,9 @@ import {
     uploadMapFile,
     uploadWordFile,
     deleteFile,
+    getDeletedFiles,
+    restoreFile,
+    permanentlyDeleteFile,
 } from '../services/file.service';
 import { checkAdminMiddleware } from '../middlewares/isAdmin';
 
@@ -66,6 +69,11 @@ fileRoute.get('/:fileId/downloadManyWord', exportManyWord);
 fileRoute.get('/:fileId/sheets/:sheetName/export', exportFileBySheet);
 fileRoute.get('/:fileId/sheets/:sheetName', getFileData);
 fileRoute.get('/:fileId/downloadWord', exportWord);
-fileRoute.delete('/:fileId/delete', deleteFile);
+fileRoute.put('/:fileId/delete', deleteFile);
+// permanentlyDeleteFile
+fileRoute.delete('/:fileId/delete', permanentlyDeleteFile);
+// restoreFile
+fileRoute.put('/:fileId/restore', restoreFile);
 
+fileRoute.get('/deleted', getDeletedFiles);
 fileRoute.get('/', getFiles);

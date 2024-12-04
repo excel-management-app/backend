@@ -150,6 +150,12 @@ export const exportManytoWord = async (
             const loaiDatCu2 = dataDB.get('loaiDatCu2');
             dataDB.set('loaiDatCu2', getLandDescription(loaiDatCu2));
 
+            // in ra ho gia dinh
+            dataDB.set(
+                'hoGiaDinh',
+                dataDB.get('hoGiaDinh') == "ho" ? 'Hộ' : '',
+            );
+
             const dataToWord = dataDB.toJSON();
             // eslint-disable-next-line no-var
             var pathFileTemplate = '';
@@ -287,7 +293,15 @@ export const exportOneToWord = async (
         const loaiDatCu2 = dataExport.get('loaiDatCu2');
         dataExport.set('loaiDatCu2', getLandDescription(loaiDatCu2));
 
+        // in ra ho gia dinh
+        dataExport.set(
+            'hoGiaDinh',
+            dataExport.get('hoGiaDinh') == "ho" ? 'Hộ' : '',
+        );
+
+
         const dataToWord = dataExport.toJSON();
+
         // eslint-disable-next-line no-var
         var pathFileTemplate = '';
         // eslint-disable-next-line no-var

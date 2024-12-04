@@ -15,6 +15,8 @@ import { getSheetFileData } from './functions/getSheetFileData';
 import { insertExcelDataToDB } from './functions/insertExcelDataToDB';
 import MongoDB from '../db';
 import fs from 'fs';
+import { mapFileResult } from './functions/mapFileResult';
+import path from 'path';
 
 global.localStorage = new LocalStorage('./scratch');
 
@@ -42,7 +44,8 @@ export const uploadExcelFile = async (
     }
 };
 
-export const uploadWordFile = (req: Request, res: Response) => {
+
+export const uploadWordFile = async (req: Request, res: Response) => {
     try {
         if (!req.file) {
             res.status(400).send('No file uploaded.');
@@ -52,13 +55,22 @@ export const uploadWordFile = (req: Request, res: Response) => {
         const typeFile = req.body.type;
 
         const filePath = req.file.path;
-
+        var oldFile;
+            
         if (typeFile.toString() == '1') {
+            oldFile = global.localStorage.getItem('wordCapMoi');
             global.localStorage.setItem('wordCapMoi', filePath);
         }
         if (typeFile.toString() == '2') {
+            oldFile = global.localStorage.getItem('wordCapDoi');
             global.localStorage.setItem('wordCapDoi', filePath);
         }
+        // xóa file cũ khi up mới
+        const folderPath = path.resolve(oldFile ? oldFile: "");
+        if (fs.existsSync(folderPath)) {
+            await fs.promises.rm(folderPath, { recursive: true, force: true });
+        }
+
         // Insert the Excel file into the database
         res.status(200).send({
             message: 'File successfully processed and data inserted.',
@@ -235,14 +247,24 @@ export const getFileData = async (
 
 export const getFiles = async (_req: Request, res: Response) => {
     try {
-        // Fetch files OriginFile
-        const files = await OriginFile.find();
-        const data = files.map((file) => ({
-            id: file.gridFSId?.toString(), // Thay đổi id thành gridFSId
-            fileName: file.fileName,
-            uploadedAt: file.uploadedAt,
-            sheetNames: file.sheetNames,
-        }));
+        const files = await OriginFile.find({
+            deletedAt: { $eq: null },
+        }).sort({ uploadedAt: -1 });
+        const data = files.map(mapFileResult);
+
+        res.json({ data });
+    } catch (error) {
+        console.error('Error retrieving files:', error);
+        res.status(500).send('Error retrieving files');
+    }
+};
+
+export const getDeletedFiles = async (_req: Request, res: Response) => {
+    try {
+        const files = await OriginFile.find({
+            deletedAt: { $ne: null },
+        }).sort({ uploadedAt: -1 });
+        const data = files.map(mapFileResult);
 
         res.json({ data });
     } catch (error) {
@@ -432,11 +454,28 @@ export const updateOrAddRowInSheet = async (
 export const deleteFile = async (req: Request, res: Response) => {
     try {
         const { fileId } = req.params;
+        await OriginFile.updateOne(
+            { gridFSId: fileId },
+            { deletedAt: new Date() },
+        );
+
+        res.status(200).send('File deleted successfully.');
+    } catch (error) {
+        console.error('Error deleting file:', error);
+        res.status(500).send('Error deleting file.');
+    }
+};
+
+// permanently delete file
+export const permanentlyDeleteFile = async (req: Request, res: Response) => {
+    try {
+        const { fileId } = req.params;
         const file = await OriginFile.findOne({ gridFSId: fileId });
         if (!file || !file.gridFSId) {
             res.status(404).send('File not found.');
             return;
         }
+
         await file.deleteOne();
         // delete excel file in database
         await ExcelFile.deleteMany({ gridFSId: fileId });
@@ -454,5 +493,17 @@ export const deleteFile = async (req: Request, res: Response) => {
     } catch (error) {
         console.error('Error deleting file:', error);
         res.status(500).send('Error deleting file.');
+    }
+};
+
+export const restoreFile = async (req: Request, res: Response) => {
+    try {
+        const { fileId } = req.params;
+        await OriginFile.updateOne({ gridFSId: fileId }, { deletedAt: null });
+
+        res.status(200).send('File restored successfully.');
+    } catch (error) {
+        console.error('Error restoring file:', error);
+        res.status(500).send('Error restoring file.');
     }
 };
