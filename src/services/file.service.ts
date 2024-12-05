@@ -530,20 +530,20 @@ export const bulkInsertRows = async (req: Request, res: Response) => {
 
                 if (fileToUpdate && sheetToUpdate && rowIndexToUpdate !== -1) {
                     // Replace existing row
-                    await ExcelFile.bulkWrite([
-                        {
-                            updateOne: {
-                                filter: {
-                                    _id: fileToUpdate._id,
-                                    'sheets.sheetName': sheetName,
-                                },
-                                update: {
-                                    $set: { 'sheets.$.rows.$[row]': newRow },
-                                },
-                                arrayFilters: [{ 'row.tamY': tamY }],
-                            },
-                        },
-                    ]);
+                    // await ExcelFile.bulkWrite([
+                    //     {
+                    //         updateOne: {
+                    //             filter: {
+                    //                 _id: fileToUpdate._id,
+                    //                 'sheets.sheetName': sheetName,
+                    //             },
+                    //             update: {
+                    //                 $set: { 'sheets.$.rows.$[row]': newRow },
+                    //             },
+                    //             arrayFilters: [{ 'row.tamY': tamY }],
+                    //         },
+                    //     },
+                    // ]);
                 } else {
                     // Insert new row
                     await ExcelFile.updateOne(
