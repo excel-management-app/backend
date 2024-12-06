@@ -66,7 +66,7 @@ fileRoute.get(
 
 fileRoute.get('/:fileId/sheets/:sheetName/rows', searchDataByNameAndDate);
 
-fileRoute.post('/:fileId/sheets/:sheetName/rows', updateOrAddRowInSheet);
+fileRoute.post('/:fileId/sheets/:sheetName/rows',authenticateJWT, updateOrAddRowInSheet);
 // bulk insert
 fileRoute.post('/:fileId/sheets/:sheetName/rows/bulk', bulkInsertRows);
 

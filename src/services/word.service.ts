@@ -13,7 +13,6 @@ import Statistic from '../models/statistic';
 import { LOAI_DAT } from '../utils/formFields';
 import { OUTPUT_FILE_PATH } from './functions/exportExcelDataFromDB';
 import { findSheetToUpdate } from './functions/findSheetToUpdate';
-import { getAccountIdFromHeader } from './functions/getAccountIdFromHeader';
 import { AuthenticatedRequest } from './types';
 
 global.localStorage = new LocalStorage('./scratch');
@@ -68,7 +67,7 @@ export const exportManytoWord = async (
             // Tạo thời gian kết thúc của ngày hôm nay (23:59:59.999)
             const endOfDay = new Date(now.setHours(23, 59, 59, 999));
 
-            const accountId = getAccountIdFromHeader(req);
+            const accountId = (req as AuthenticatedRequest).user?.id;
             const statistic = await Statistic.find({
                 accountId,
                 createdAt: { $gte: startOfDay, $lte: endOfDay },

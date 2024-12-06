@@ -9,7 +9,6 @@ import {
     exportExcelDataFromDB,
     OUTPUT_FILE_PATH,
 } from './functions/exportExcelDataFromDB';
-import { getAccountIdFromHeader } from './functions/getAccountIdFromHeader';
 import { getFileDataByFileId } from './functions/getFileDataByFileId';
 import { getSheetFileData } from './functions/getSheetFileData';
 import { insertExcelDataToDB } from './functions/insertExcelDataToDB';
@@ -19,6 +18,7 @@ import { mapFileResult } from './functions/mapFileResult';
 import path from 'path';
 import { chunk } from 'lodash';
 import { ROW_BATCH_SIZE } from './consts';
+import { AuthenticatedRequest } from './types';
 
 global.localStorage = new LocalStorage('./scratch');
 
@@ -378,7 +378,7 @@ export const updateOrAddRowInSheet = async (
         const { fileId, sheetName } = req.params;
 
         const rowData = req.body.data;
-        const accountId = getAccountIdFromHeader(req);
+        const accountId = (req as AuthenticatedRequest).user?.id;
         const tamY = `${rowData.soHieuToBanDo}_${rowData.soThuTuThua}`;
 
         const files = await getFileDataByFileId(fileId);
