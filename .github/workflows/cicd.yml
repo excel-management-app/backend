@@ -13,7 +13,7 @@ jobs:
             - name: Login to Docker Hub
               run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
             - name: Build Docker image
-              run: docker build -t duyhiep99/excel-backend --build-arg NODE_ENV='production' .
+              run: docker build -t duyhiep99/excel-backend --build-arg NODE_ENV=${{ secrets.NODE_ENV }} .
             - name: Push Docker image to Docker Hub
               run: docker push duyhiep99/excel-backend
     deploy:
