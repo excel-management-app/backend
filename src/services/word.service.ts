@@ -13,7 +13,7 @@ import Statistic from '../models/statistic';
 import { LOAI_DAT } from '../utils/formFields';
 import { OUTPUT_FILE_PATH } from './functions/exportExcelDataFromDB';
 import { findSheetToUpdate } from './functions/findSheetToUpdate';
-import { getAccountIdFromHeader } from './functions/getAccountIdFromHeader';
+import { AuthenticatedRequest } from './types';
 
 global.localStorage = new LocalStorage('./scratch');
 
@@ -67,7 +67,7 @@ export const exportManytoWord = async (
             // Tạo thời gian kết thúc của ngày hôm nay (23:59:59.999)
             const endOfDay = new Date(now.setHours(23, 59, 59, 999));
 
-            const accountId = getAccountIdFromHeader(req);
+            const accountId = (req as AuthenticatedRequest).user?.id;
             const statistic = await Statistic.find({
                 accountId,
                 createdAt: { $gte: startOfDay, $lte: endOfDay },
@@ -149,6 +149,12 @@ export const exportManytoWord = async (
 
             const loaiDatCu2 = dataDB.get('loaiDatCu2');
             dataDB.set('loaiDatCu2', getLandDescription(loaiDatCu2));
+
+            // in ra ho gia dinh
+            dataDB.set(
+                'hoGiaDinh',
+                dataDB.get('hoGiaDinh') == 'ho' ? 'Hộ' : '',
+            );
 
             const dataToWord = dataDB.toJSON();
             // eslint-disable-next-line no-var
@@ -287,7 +293,14 @@ export const exportOneToWord = async (
         const loaiDatCu2 = dataExport.get('loaiDatCu2');
         dataExport.set('loaiDatCu2', getLandDescription(loaiDatCu2));
 
+        // in ra ho gia dinh
+        dataExport.set(
+            'hoGiaDinh',
+            dataExport.get('hoGiaDinh') == 'ho' ? 'Hộ' : '',
+        );
+
         const dataToWord = dataExport.toJSON();
+
         // eslint-disable-next-line no-var
         var pathFileTemplate = '';
         // eslint-disable-next-line no-var
@@ -361,7 +374,7 @@ export const exportOneToWord = async (
         // Tạo thời gian kết thúc của ngày hôm nay (23:59:59.999)
         const endOfDay = new Date(now.setHours(23, 59, 59, 999));
 
-        const accountId = getAccountIdFromHeader(req);
+        const accountId = (req as AuthenticatedRequest).user?.id;
         const statistic = await Statistic.find({
             accountId,
             createdAt: { $gte: startOfDay, $lte: endOfDay },
@@ -385,6 +398,6 @@ export const exportOneToWord = async (
 
         res.status(200).send('Tạo file thành công: ');
     } catch (error: any) {
-        res.status(500).send('Error updating row: ' + error.message);
+        res.status(500).send('Error export row: ' + error.message);
     }
 };

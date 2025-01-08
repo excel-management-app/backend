@@ -4,8 +4,7 @@ import xlsx from 'xlsx';
 import { chunk } from 'lodash';
 import MongoDB from '../../db';
 import OriginFile from '../../models/originFile';
-
-const BATCH_SIZE = 5000;
+import { ROW_BATCH_SIZE } from '../consts';
 
 export const insertExcelDataToDB = async (filePath: string): Promise<void> => {
     const mongoInstance = MongoDB.getInstance();
@@ -99,7 +98,7 @@ async function processExcelFile(
             });
 
         // Chunk rows into batches for bulk insert
-        const rowChunks = chunk(rowObjects, BATCH_SIZE);
+        const rowChunks = chunk(rowObjects, ROW_BATCH_SIZE);
         for (const rowChunk of rowChunks) {
             const bulkOperator = {
                 insertOne: {
