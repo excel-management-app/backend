@@ -17,9 +17,12 @@ jobs:
             - name: Push Docker image to Docker Hub
               run: docker push duyhiep99/excel-backend
     deploy:
+        needs: build
         runs-on: self-hosted
         steps:
             - name: Pull Docker image from Docker Hub
               run: docker pull duyhiep99/excel-backend:latest
+            - name: Delete existing Docker container
+              run: docker rm -f excel-backend || true
             - name: Run Docker container
               run: docker run -d -p 3001:3001 --name excel-backend -e MONGO_PASSWORD=${{ secrets.MONGO_PASSWORD }} duyhiep99/excel-backend
