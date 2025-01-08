@@ -13,8 +13,6 @@ ENV MONGO_URI=$MONGO_URI
 WORKDIR /app
 COPY package*.json .
 RUN npm install
-# Install TypeScript (if necessary)
-RUN npm install -g typescript
 COPY . .
 RUN npm run build
 EXPOSE 3001
