@@ -27,9 +27,9 @@ jobs:
                   docker --version
 
             - name: Build Docker image
-              shell: bash
               run: |
-                  docker build -t duyhiep99/excel-backend:latest \
+                  docker build \
+                  -t duyhiep99/excel-backend:latest \
                   --build-arg NODE_ENV=${{ secrets.NODE_ENV }} \
                   --build-arg MONGO_URI=${{ secrets.MONGO_URI }} \
                   --build-arg SECRET_KEY=${{ secrets.SECRET_KEY }} \
