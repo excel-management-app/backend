@@ -37,7 +37,9 @@ app.use(helmet());
 // Apply CORS middleware
 app.use(
     cors({
-        origin: '*',
+        origin: 'http://ec2-13-213-0-177.ap-southeast-1.compute.amazonaws.com', // URL frontend
+        methods: ['GET', 'POST', 'PUT', 'DELETE'],
+        credentials: true,
     }),
 );
 
