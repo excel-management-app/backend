@@ -44,11 +44,4 @@ jobs:
 
             - name: Run Docker Container
               run: |
-                  docker run -d \
-                  -p 3001:3001 \
-                  --name excel-backend \
-                  -e NODE_ENV=${{ secrets.NODE_ENV }} \
-                  -e MONGO_URI=${{ secrets.MONGO_URI }} \
-                  -e SECRET_KEY=${{ secrets.SECRET_KEY }} \
-                  -e PORT=${{ secrets.PORT }} \
-                  duyhiep99/excel-backend:latest
+                  docker run -d -p 3001:3001 --name excel-backend duyhiep99/excel-backend:latest
