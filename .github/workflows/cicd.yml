@@ -4,25 +4,55 @@ on:
     push:
         branches:
             - deploy-to-aws
+
 jobs:
     build:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout
               uses: actions/checkout@v4
+
             - name: Login to Docker Hub
-              run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+              env:
+                  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+                  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+              run: echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
+
             - name: Build Docker image
-              run: docker build -t duyhiep99/excel-backend --build-arg NODE_ENV=${{ secrets.NODE_ENV }} .
+              run: |
+                  docker build \
+                  -t duyhiep99/excel-backend:latest \
+                  --build-arg NODE_ENV=${{ secrets.NODE_ENV }} \
+                  --build-arg MONGO_URI=${{ secrets.MONGO_URI }} \
+                  --build-arg SECRET_KEY=${{ secrets.SECRET_KEY }} \
+                  --build-arg PORT=${{ secrets.PORT }} .
+
             - name: Push Docker image to Docker Hub
-              run: docker push duyhiep99/excel-backend
+              run: docker push duyhiep99/excel-backend:latest
+
     deploy:
         needs: build
         runs-on: self-hosted
         steps:
             - name: Pull Docker image from Docker Hub
               run: docker pull duyhiep99/excel-backend:latest
-            - name: Delete existing Docker container
-              run: docker rm -f excel-backend || true
-            - name: Run Docker container
-              run: docker run -d -p 3001:3001 --name excel-backend -e MONGO_PASSWORD=${{ secrets.MONGO_PASSWORD }} duyhiep99/excel-backend
+
+            - name: Stop and Remove Existing Docker Container
+              run: |
+                  if [ $(docker ps -q -f name=excel-backend) ]; then
+                    docker stop excel-backend
+                  fi
+                  if [ $(docker ps -a -q -f name=excel-backend) ]; then
+                    docker rm excel-backend
+                  fi
+
+            - name: Run Docker Container
+              run: |
+                  docker run -d \
+                  -p 3001:3001 \
+                  --name excel-backend \
+                  -e NODE_ENV=${{ secrets.NODE_ENV }} \
+                  -e MONGO_URI=${{ secrets.MONGO_URI }} \
+                  -e SECRET_KEY=${{ secrets.SECRET_KEY }} \
+                  -e PORT=${{ secrets.PORT }} \
+                  duyhiep99/excel-backend:latest
