@@ -22,7 +22,6 @@ jobs:
               uses: docker/build-push-action@v3
               with:
                   context: .
-                  file: ./Dockerfile
                   push: true
                   tags: duyhiep99/excel-backend:latest
                   build-args: |
