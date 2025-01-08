@@ -1,15 +1,19 @@
-FROM node:22-bookworm
+FROM node:22-bookworm 
+
+ARG MONGO_URI
+ARG PORT
+ARG SECRET_KEY
+ARG NODE_ENV
+
+ENV NODE_ENV=$NODE_ENV
+ENV SECRET_KEY=$SECRET_KEY
+ENV PORT=$PORT
+ENV MONGO_URI=$MONGO_URI
 
 WORKDIR /app
-
 COPY package*.json .
-
-RUN npm install
-
+RUN npm ci
 COPY . .
-
 RUN npm run build
-
 EXPOSE 3001
-
 CMD ["npm", "start"]

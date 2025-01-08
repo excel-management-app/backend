@@ -84,6 +84,10 @@ cron.schedule('*/15 * * * *', () => {
 // if (!fs.existsSync(TEMPLATE_DIR)) {
 //     fs.mkdirSync(TEMPLATE_DIR);
 // }
+
+app.get('/', (req, res) => {
+    res.send('Hello World');
+});
 app.listen(PORT, () => {
     connectToMongoDB().catch((err) =>
         console.error('Error connecting to MongoDB:', err),
