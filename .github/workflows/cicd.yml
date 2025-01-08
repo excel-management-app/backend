@@ -39,12 +39,8 @@ jobs:
 
             - name: Stop and Remove Existing Docker Container
               run: |
-                  if [ "$(docker ps -q -f name=excel-backend)" ]; then
-                    docker stop excel-backend
-                  fi
-                  if [ "$(docker ps -a -q -f name=excel-backend)" ]; then
-                    docker rm excel-backend
-                  fi
+                  docker stop excel-backend || true
+                  docker rm excel-backend || true
 
             - name: Run Docker Container
               run: |
