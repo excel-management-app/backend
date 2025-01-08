@@ -18,10 +18,18 @@ jobs:
                   DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
               run: echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
 
-            - name: Build Docker image
+            - name: Debug Environment
               run: |
-                  docker build \
-                  -t duyhiep99/excel-backend:latest \
+                  echo "NODE_ENV=${{ secrets.NODE_ENV }}"
+                  echo "MONGO_URI=${{ secrets.MONGO_URI }}"
+                  echo "SECRET_KEY=${{ secrets.SECRET_KEY }}"
+                  echo "PORT=${{ secrets.PORT }}"
+                  docker --version
+
+            - name: Build Docker image
+              shell: bash
+              run: |
+                  docker build -t duyhiep99/excel-backend:latest \
                   --build-arg NODE_ENV=${{ secrets.NODE_ENV }} \
                   --build-arg MONGO_URI=${{ secrets.MONGO_URI }} \
                   --build-arg SECRET_KEY=${{ secrets.SECRET_KEY }} \
