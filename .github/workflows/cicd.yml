@@ -18,14 +18,6 @@ jobs:
                   DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
               run: echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
 
-            - name: Debug Environment
-              run: |
-                  echo "NODE_ENV=${{ secrets.NODE_ENV }}"
-                  echo "MONGO_URI=${{ secrets.MONGO_URI }}"
-                  echo "SECRET_KEY=${{ secrets.SECRET_KEY }}"
-                  echo "PORT=${{ secrets.PORT }}"
-                  docker --version
-
             - name: Build Docker image
               run: |
                   docker build \
@@ -47,10 +39,10 @@ jobs:
 
             - name: Stop and Remove Existing Docker Container
               run: |
-                  if [ $(docker ps -q -f name=excel-backend) ]; then
+                  if [ "$(docker ps -q -f name=excel-backend)" ]; then
                     docker stop excel-backend
                   fi
-                  if [ $(docker ps -a -q -f name=excel-backend) ]; then
+                  if [ "$(docker ps -a -q -f name=excel-backend)" ]; then
                     docker rm excel-backend
                   fi
 
