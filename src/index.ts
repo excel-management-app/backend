@@ -4,7 +4,6 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
 import helmet from 'helmet';
-import morgan from 'morgan';
 import cron from 'node-cron';
 import path from 'path';
 import { deleteFilesFromExportDir } from './crons/deleteFilesFromExportDir';
@@ -13,9 +12,6 @@ import Account from './models/account';
 import { appRouter } from './routes/index';
 // load .env
 dotenv.config();
-
-const isProduction = process.env.NODE_ENV === 'production';
-
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(
@@ -24,10 +20,6 @@ app.use(
     }),
 );
 
-if (!isProduction) {
-    // use morgan
-    app.use(morgan('combined'));
-}
 // use compression
 app.use(compression());
 
@@ -74,7 +66,6 @@ async function connectToMongoDB() {
 const EXPORT_DIR = path.join(__dirname, 'files/exports');
 
 cron.schedule('*/15 * * * *', () => {
-    console.log('Running file deletion task...');
     deleteFilesFromExportDir(EXPORT_DIR);
 });
 // // if no folder src/files/exports, create one for exports

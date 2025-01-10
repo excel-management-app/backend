@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 const sheetSchema = new mongoose.Schema({
-    sheetName: { type: String, index: true },
+    sheetName: { type: String },
     headers: [String],
     rows: [
         {

@@ -517,10 +517,15 @@ export const bulkInsertRows = async (req: Request, res: Response) => {
 
         // Chunk rows into batches for bulk insert
         const rowChunks = chunk(newRows, ROW_BATCH_SIZE);
-        for (const rowChunk of rowChunks) {
-            for (const newRow of rowChunk) {
+
+        // Fetch the file data only once per chunk
+        const files = await getFileDataByFileId(fileId);
+
+        // Process row chunks concurrently
+        const insertPromises = rowChunks.map(async (rowChunk) => {
+            // Process each row in the current chunk
+            const rowInsertPromises = rowChunk.map(async (newRow) => {
                 const tamY = `${(newRow as any).soHieuToBanDo}_${(newRow as any).soThuTuThua}`;
-                const files = await getFileDataByFileId(fileId);
                 const { fileToUpdate, sheetToUpdate, rowIndexToUpdate } =
                     checkRowExist({
                         files,
@@ -528,31 +533,26 @@ export const bulkInsertRows = async (req: Request, res: Response) => {
                         tamY,
                     });
 
+                // If the row exists, skip the insertion
                 if (fileToUpdate && sheetToUpdate && rowIndexToUpdate !== -1) {
-                    // Replace existing row
-                    // await ExcelFile.bulkWrite([
-                    //     {
-                    //         updateOne: {
-                    //             filter: {
-                    //                 _id: fileToUpdate._id,
-                    //                 'sheets.sheetName': sheetName,
-                    //             },
-                    //             update: {
-                    //                 $set: { 'sheets.$.rows.$[row]': newRow },
-                    //             },
-                    //             arrayFilters: [{ 'row.tamY': tamY }],
-                    //         },
-                    //     },
-                    // ]);
-                } else {
-                    // Insert new row
-                    await ExcelFile.updateOne(
-                        { gridFSId: fileId, 'sheets.sheetName': sheetName },
-                        { $push: { 'sheets.$.rows': newRow } },
-                    );
+                    return; // Skip existing row
                 }
-            }
-        }
+
+                // Insert the new row into the sheet
+                await ExcelFile.updateOne(
+                    { gridFSId: fileId, 'sheets.sheetName': sheetName },
+                    { $push: { 'sheets.$.rows': newRow } },
+                );
+            });
+
+            // Wait for all rows in the chunk to be processed
+            await Promise.all(rowInsertPromises);
+        });
+
+        // Wait for all chunk insertions to finish
+        await Promise.all(insertPromises);
+
+        // Return success response
         res.status(200).send('Rows inserted successfully.');
     } catch (error) {
         console.error('Error bulk inserting rows:', error);
