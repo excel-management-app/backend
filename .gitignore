@@ -24,8 +24,8 @@ note.txt
 scratch/
 
 
-src/files/exports/
-src/files/templates/
+src/storages/exports/
+src/storages/templates/
 
 # env
 .env

@@ -3,7 +3,6 @@ import multer from 'multer';
 import {
     exportFileBySheet,
     exportManyWord,
-    exportMap,
     exportWord,
     getFileData,
     searchDataByNameAndDate,
@@ -11,20 +10,20 @@ import {
     getFiles,
     updateOrAddRowInSheet,
     uploadExcelFile,
-    uploadMapFile,
-    uploadWordFile,
     deleteFile,
     getDeletedFiles,
     restoreFile,
     permanentlyDeleteFile,
     bulkInsertRows,
-} from '../services/file.service';
+} from 'services/files';
 import { checkAdminMiddleware } from '../middlewares/isAdmin';
 import { authenticateJWT } from '../middlewares/authenticateJWT';
+import { uploadWordTemplate } from 'services/files/uploadWordTemplate';
+import { TEMPLATES_PATH } from 'storages/consts';
 
 const storage = multer.diskStorage({
     destination: function (_req, _file, cb) {
-        cb(null, 'src/files/templates');
+        cb(null, TEMPLATES_PATH);
     },
     filename: function (_req, file, cb) {
         cb(null, `${Date.now()}-${file.originalname}`);
@@ -48,15 +47,7 @@ fileRoute.post(
     authenticateJWT,
     checkAdminMiddleware,
     upload.single('file'),
-    uploadWordFile,
-);
-
-fileRoute.post(
-    '/uploadTemplateMapFile',
-    authenticateJWT,
-    checkAdminMiddleware,
-    upload.single('file'),
-    uploadMapFile,
+    uploadWordTemplate,
 );
 
 fileRoute.get(
@@ -66,16 +57,21 @@ fileRoute.get(
 
 fileRoute.get('/:fileId/sheets/:sheetName/rows', searchDataByNameAndDate);
 
-fileRoute.post('/:fileId/sheets/:sheetName/rows',authenticateJWT, updateOrAddRowInSheet);
+fileRoute.post(
+    '/:fileId/sheets/:sheetName/rows',
+    authenticateJWT,
+    updateOrAddRowInSheet,
+);
 // bulk insert
 fileRoute.post('/:fileId/sheets/:sheetName/rows/bulk', bulkInsertRows);
 
+// word
 fileRoute.get('/downloadWord/:tamY', exportWord);
-fileRoute.get('/downloadMap', exportMap);
 fileRoute.get('/:fileId/downloadManyWord', exportManyWord);
 fileRoute.get('/:fileId/sheets/:sheetName/export', exportFileBySheet);
 fileRoute.get('/:fileId/sheets/:sheetName', getFileData);
 fileRoute.get('/:fileId/downloadWord', exportWord);
+
 fileRoute.put(
     '/:fileId/delete',
     authenticateJWT,

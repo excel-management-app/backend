@@ -5,11 +5,11 @@ import dotenv from 'dotenv';
 import express from 'express';
 import helmet from 'helmet';
 import cron from 'node-cron';
-import path from 'path';
 import { deleteFilesFromExportDir } from './crons/deleteFilesFromExportDir';
 import MongoDB from './db/index';
 import Account from './models/account';
 import { appRouter } from './routes/index';
+import { EXPORTS_PATH } from 'storages/consts';
 // load .env
 dotenv.config();
 const app = express();
@@ -63,18 +63,11 @@ async function connectToMongoDB() {
     await initAdminAccount();
 }
 // Schedule a cron job to run every 15 minutes
-const EXPORT_DIR = path.join(__dirname, 'files/exports');
 
 cron.schedule('*/15 * * * *', () => {
-    deleteFilesFromExportDir(EXPORT_DIR);
+    deleteFilesFromExportDir(EXPORTS_PATH);
 });
-// // if no folder src/files/exports, create one for exports
-// if (!fs.existsSync(EXPORT_DIR)) {
-//     fs.mkdirSync(EXPORT_DIR);
-// }
-// if (!fs.existsSync(TEMPLATE_DIR)) {
-//     fs.mkdirSync(TEMPLATE_DIR);
-// }
+
 app.listen(PORT, () => {
     connectToMongoDB().catch((err) =>
         console.error('Error connecting to MongoDB:', err),

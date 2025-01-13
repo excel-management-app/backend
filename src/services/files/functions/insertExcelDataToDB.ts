@@ -2,9 +2,9 @@ import fs from 'fs';
 import { GridFSBucket, ObjectId } from 'mongodb';
 import xlsx from 'xlsx';
 import { chunk } from 'lodash';
-import MongoDB from '../../db';
-import OriginFile from '../../models/originFile';
-import { ROW_BATCH_SIZE } from '../consts';
+import MongoDB from '../../../db';
+import OriginFile from '../../../models/originFile';
+import { ROW_BATCH_SIZE } from '../../consts';
 
 export const insertExcelDataToDB = async (filePath: string): Promise<void> => {
     const mongoInstance = MongoDB.getInstance();

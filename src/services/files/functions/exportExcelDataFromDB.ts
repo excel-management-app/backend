@@ -1,14 +1,10 @@
 import * as ExcelJS from 'exceljs';
 import fs from 'fs';
-import path from 'path';
-import ExcelFile from '../../models/excelFile';
-import { RowData } from '../types';
+import ExcelFile from '../../../models/excelFile';
+import { RowData } from '../../types';
+import { EXPORTS_PATH, TEMPLATES_PATH } from 'storages/consts';
 
-const EXPORT_TEMPLATE_PATH = path.join(
-    __dirname,
-    '../../files/templates/export_template.xlsx',
-);
-export const OUTPUT_FILE_PATH = path.join(__dirname, '../../files/exports/');
+const EXPORT_TEMPLATE_PATH = `${TEMPLATES_PATH}/export_template.xlsx`;
 
 export async function exportExcelDataFromDB({
     fileId,
@@ -77,7 +73,7 @@ export async function exportExcelDataFromDB({
             });
         });
 
-        const outputFilePath = `${OUTPUT_FILE_PATH}exported_file_${fileId}_${sheetName}.xlsx`;
+        const outputFilePath = `${EXPORTS_PATH}/exported_file_${fileId}_${sheetName}.xlsx`;
 
         return new Promise((resolve, reject) => {
             const stream = fs.createWriteStream(outputFilePath);
