@@ -15,7 +15,7 @@ import {
     restoreFile,
     permanentlyDeleteFile,
     bulkInsertRows,
-} from '../services/file.service';
+} from 'services/files';
 import { checkAdminMiddleware } from '../middlewares/isAdmin';
 import { authenticateJWT } from '../middlewares/authenticateJWT';
 import { uploadWordTemplate } from 'services/files/uploadWordTemplate';

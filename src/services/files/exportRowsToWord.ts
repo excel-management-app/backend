@@ -3,7 +3,7 @@ import { Request, Response } from 'express';
 import fs from 'fs';
 import Statistic from 'models/statistic';
 import PizZip from 'pizzip';
-import { findSheetToUpdate } from 'services/functions/findSheetToUpdate';
+import { findSheetToUpdate } from 'services/files/functions/findSheetToUpdate';
 import { AuthenticatedRequest } from 'services/types';
 import { EXPORTS_PATH, TEMPLATES_PATH } from 'storages/consts';
 import { getLandDescription } from './functions/getLandDescription';

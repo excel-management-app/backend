@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import MongoDB from '../../db';
+import MongoDB from '../../../db';
 import { GridFSBucket, ObjectId } from 'mongodb';
 
 export const getGridFsFileById = async (fileId: string) => {

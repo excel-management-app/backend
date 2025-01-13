@@ -1,0 +1,15 @@
+export { bulkInsertRows } from './bulkInsertRows';
+export { deleteFile } from './deleteFile';
+export { exportFileBySheet } from './exportFileBySheet';
+export { exportManyWord } from './exportManyWord';
+export { exportWord } from './exportWord';
+export { getDeletedFiles } from './getDeletedFiles';
+export { getFileData } from './getFileData';
+export { getFileDataBySheetNameAndTamY } from './getFileDataBySheetNameAndTamY';
+export { getFiles } from './getFiles';
+export { permanentlyDeleteFile } from './permanentlyDeleteFile';
+export { restoreFile } from './restoreFile';
+export { searchDataByNameAndDate } from './searchDataByNameAndDate';
+export { updateOrAddRowInSheet } from './updateOrAddRowInSheet';
+export { uploadExcelFile } from './uploadExcelFile';
+export { uploadWordTemplate } from './uploadWordTemplate';

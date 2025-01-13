@@ -1,4 +1,4 @@
-import ExcelFile from '../../models/excelFile';
+import ExcelFile from '../../../models/excelFile';
 
 interface Props {
     fileId: string;

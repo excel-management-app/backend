@@ -1,7 +1,7 @@
 import * as ExcelJS from 'exceljs';
 import fs from 'fs';
-import ExcelFile from '../../models/excelFile';
-import { RowData } from '../types';
+import ExcelFile from '../../../models/excelFile';
+import { RowData } from '../../types';
 import { EXPORTS_PATH, TEMPLATES_PATH } from 'storages/consts';
 
 const EXPORT_TEMPLATE_PATH = `${TEMPLATES_PATH}/export_template.xlsx`;
