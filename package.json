@@ -5,9 +5,9 @@
     "main": "build/index.js",
     "scripts": {
         "compile": "tsc",
-        "create-dirs": "mkdirp build/files/exports build/files/templates",
-        "copy-exports": "copyfiles -f src/files/exports/**/* build/files/exports",
-        "copy-templates": "copyfiles -f src/files/templates/**/* build/files/templates",
+        "create-dirs": "mkdirp build/storages/exports build/storages/templates",
+        "copy-exports": "copyfiles -f src/storages/exports/**/* build/storages/exports",
+        "copy-templates": "copyfiles -f src/storages/templates/**/* build/storages/templates",
         "build": "npm run compile && npm run create-dirs && npm run copy-exports && npm run copy-templates",
         "start": "node build/index.js",
         "dev": "NODE_PATH=./src nodemon src/index.ts",
