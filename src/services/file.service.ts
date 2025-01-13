@@ -1,26 +1,20 @@
 import { GridFSBucket } from 'mongodb';
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Request, Response } from 'express';
-import { LocalStorage } from 'node-localstorage';
+import fs from 'fs';
+import { chunk } from 'lodash';
+import { EXPORTS_PATH } from 'storages/consts';
+import MongoDB from '../db';
 import ExcelFile from '../models/excelFile';
 import OriginFile from '../models/originFile';
+import { ROW_BATCH_SIZE } from './consts';
 import { checkRowExist } from './functions/checkRowExist';
-import {
-    exportExcelDataFromDB,
-    OUTPUT_FILE_PATH,
-} from './functions/exportExcelDataFromDB';
+import { exportExcelDataFromDB } from './functions/exportExcelDataFromDB';
 import { getFileDataByFileId } from './functions/getFileDataByFileId';
 import { getSheetFileData } from './functions/getSheetFileData';
 import { insertExcelDataToDB } from './functions/insertExcelDataToDB';
-import MongoDB from '../db';
-import fs from 'fs';
 import { mapFileResult } from './functions/mapFileResult';
-import path from 'path';
-import { chunk } from 'lodash';
-import { ROW_BATCH_SIZE } from './consts';
 import { AuthenticatedRequest } from './types';
-
-global.localStorage = new LocalStorage('./scratch');
 
 export const uploadExcelFile = async (
     req: Request,
@@ -46,65 +40,6 @@ export const uploadExcelFile = async (
     }
 };
 
-export const uploadWordFile = async (req: Request, res: Response) => {
-    try {
-        if (!req.file) {
-            res.status(400).send('No file uploaded.');
-            return;
-        }
-
-        const typeFile = req.body.type;
-
-        const filePath = req.file.path;
-        let oldFile;
-
-        if (typeFile.toString() == '1') {
-            oldFile = global.localStorage.getItem('wordCapMoi');
-            global.localStorage.setItem('wordCapMoi', filePath);
-        }
-        if (typeFile.toString() == '2') {
-            oldFile = global.localStorage.getItem('wordCapDoi');
-            global.localStorage.setItem('wordCapDoi', filePath);
-        }
-        // xóa file cũ khi up mới
-        const folderPath = path.resolve(oldFile ? oldFile : '');
-        if (fs.existsSync(folderPath)) {
-            await fs.promises.rm(folderPath, { recursive: true, force: true });
-        }
-
-        // Insert the Excel file into the database
-        res.status(200).send({
-            message: 'File successfully processed and data inserted.',
-            filePath: filePath,
-        });
-    } catch (error) {
-        console.error('Error processing the file:', error);
-        res.status(500).send('Failed to process the file.');
-    }
-};
-
-export const uploadMapFile = (req: Request, res: Response) => {
-    try {
-        if (!req.file) {
-            res.status(400).send('No file uploaded.');
-            return;
-        }
-
-        const filePath = req.file.path;
-
-        global.localStorage.setItem('templateMapFile', filePath);
-
-        // Insert the Excel file into the database
-        res.status(200).send({
-            message: 'File successfully uploaded File.',
-            filePath: filePath,
-        });
-    } catch (error) {
-        console.error('Error processing the file:', error);
-        res.status(500).send('Failed to process the file.');
-    }
-};
-
 // export file
 export const exportFileBySheet = async (
     req: Request,
@@ -114,7 +49,7 @@ export const exportFileBySheet = async (
         const { fileId, sheetName } = req.params;
 
         await exportExcelDataFromDB({ fileId, sheetName });
-        const filePath = `${OUTPUT_FILE_PATH}exported_file_${fileId}_${sheetName}.xlsx`;
+        const filePath = `${EXPORTS_PATH}/exported_file_${fileId}_${sheetName}.xlsx`;
         res.download(filePath, `exported_file_${sheetName}.xlsx`, (err) => {
             if (err) {
                 console.error(err);
@@ -130,7 +65,7 @@ export const exportFileBySheet = async (
 export const exportWord = (req: Request, res: Response) => {
     try {
         const { tamY } = req.params;
-        const filePath = `${OUTPUT_FILE_PATH}word_file-${tamY}.docx`;
+        const filePath = `${EXPORTS_PATH}/word_file-${tamY}.docx`;
 
         res.download(filePath, `word_file-${tamY}.docx`, (err) => {
             if (err) {
@@ -144,43 +79,10 @@ export const exportWord = (req: Request, res: Response) => {
     }
 };
 
-export const exportMap = (req: Request, res: Response) => {
-    try {
-        let filePath: string = `src/files/templates/`;
-        const fullName = localStorage.getItem('templateMapFile');
-        if (fullName?.trim() !== '') {
-            // Sử dụng regex phù hợp với dấu `\\` hoặc `/` để bắt tên file
-            const nameFile = fullName?.match(/templates[\\/](.+)/);
-
-            if (nameFile && nameFile[1]) {
-                filePath = `${filePath}${nameFile[1]}`;
-
-                res.download(filePath, nameFile[1], (err: Error) => {
-                    if (err) {
-                        console.error(err);
-                        res.status(500).send('Error downloading the file.');
-                    }
-                });
-            } else {
-                console.error('File name not found in path.');
-                res.status(404).send(
-                    'Không tìm thấy đường dẫn file lưu bản đồ',
-                );
-            }
-        } else {
-            console.error('No template file specified.');
-            res.status(404).send('Bạn chưa tải lên file bản đồ');
-        }
-    } catch (error) {
-        console.error(error);
-        res.status(500).send('Error exporting file');
-    }
-};
-
 export const exportManyWord = (req: Request, res: Response) => {
     try {
         const { fileId } = req.params;
-        const filePath = `${OUTPUT_FILE_PATH}document-${fileId}.zip`;
+        const filePath = `${EXPORTS_PATH}/document-${fileId}.zip`;
         res.download(filePath, `document-${fileId}.zip`, (err) => {
             if (err) {
                 console.error(err);
